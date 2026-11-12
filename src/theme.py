@@ -94,6 +94,33 @@ def apply_theme(root: tk.Misc) -> None:
                     bordercolor=BG, arrowcolor=MUTED, relief="flat", width=10)
     style.map("TScrollbar", background=[("active", ACCENT)])
 
+    # U2 三栏布局用的补充样式
+    style.configure("Logo.TLabel", background=PANEL, foreground=WHITE,
+                    font=("Segoe UI", 14, "bold"))
+    style.configure("Brand.TLabel", background=PANEL, foreground=TEXT,
+                    font=("Segoe UI", 11, "bold"))
+    style.configure("Subtle.TLabel", background=PANEL, foreground=MUTED,
+                    font=FONT_SM)
+    style.configure("Side.TLabel", background=PANEL, foreground=MUTED_2,
+                    font=FONT_SM)
+    style.configure("Count.TLabel", background=BG, foreground=MUTED_2,
+                    font=FONT_SM)
+
+    style.configure("Nav.TButton", background=PANEL, foreground=MUTED,
+                    borderwidth=0, relief="flat", anchor="w",
+                    padding=(10, 6), font=FONT_SM)
+    style.map("Nav.TButton",
+              background=[("active", PANEL_3)],
+              foreground=[("active", TEXT)])
+    style.configure("NavOn.TButton", background=PANEL_3, foreground=ACCENT_HI,
+                    borderwidth=0, relief="flat", anchor="w",
+                    padding=(10, 6), font=FONT_SM)
+
+    style.configure("Card.TLabel", background=PANEL_2, foreground=TEXT,
+                    font=FONT)
+    style.configure("CardSub.TLabel", background=PANEL_2, foreground=MUTED,
+                    font=FONT_SM)
+
 
 # 原生 tk 控件不读 ttk.Style，需要单独上色
 _NATIVE_STYLES = (
