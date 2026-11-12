@@ -1,0 +1,30 @@
+# 运行时数据：含本机路径，不进仓库
+games.db
+games.db-journal
+*.db
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# 媒体与二进制（全局底线）；*.svg / *.ico 例外，按《决策记录》可随代码走
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.webp
+*.wav
+*.mp3
+*.mp4
+*.zip
+*.7z
+*.rar
+*.exe
+*.dll
+*.msi
+
+# 凭据
+.env
+*.key
