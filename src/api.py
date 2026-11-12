@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import platform
 import sqlite3
+import subprocess
+import threading
 from pathlib import Path
 from typing import Any, Callable
 
-from src import db, scanner
+from src import db, launcher, scanner
 
 # 表单允许写入/更新的列（与 db.UPDATABLE_FIELDS 一致）
 FORM_FIELDS = ("name", "path", "exe", "args", "tags", "note")
@@ -44,11 +46,16 @@ def _default_directory_picker() -> list[str]:
 
 class Bridge:
     def __init__(self, database: db.GameDB | None = None,
-                 directory_picker: Callable[[], list[str]] | None = None) -> None:
+                 directory_picker: Callable[[], list[str]] | None = None,
+                 process_launcher: Callable[[dict[str, Any]],
+                                           subprocess.Popen] | None = None) -> None:
         # 不在构造时建表：让测试可以传入临时库而不产生副作用；
         # 真实启动时由 webapp.main() 调用 init()。
         self.database = database or db.GameDB()
         self.directory_picker = directory_picker or _default_directory_picker
+        self.process_launcher = process_launcher or launcher.launch
+        self._running: dict[int, subprocess.Popen] = {}
+        self._lock = threading.Lock()
 
     def init(self) -> None:
         self.database.init()
@@ -192,3 +199,44 @@ class Bridge:
             except (KeyError, ValueError, sqlite3.IntegrityError):
                 skipped += 1
         return {"ok": True, "imported": imported, "skipped": skipped}
+
+    # --- W4 启动与运行状态回传 ---
+    def launch_game(self, game_id: int) -> dict[str, Any]:
+        """启动指定游戏；成功即记一次游玩，失败给出明确错误。"""
+        game = self.database.get(game_id)
+        if game is None:
+            return {"ok": False, "error": "游戏记录不存在"}
+        try:
+            process = self.process_launcher(game)
+        except OSError as exc:
+            return {"ok": False,
+                    "error": f"{type(exc).__name__}: {exc}"}
+        self.database.record_play(game_id)
+        with self._lock:
+            self._running[game_id] = process
+        return {"ok": True, "running": True}
+
+    def poll_status(self) -> dict[str, Any]:
+        """前端定时调用：收割已退出的进程并回传运行状态。
+
+        用主线程轮询而非后台线程，避免跨线程操作 pywebview 窗口。
+        """
+        finished: list[dict[str, Any]] = []
+        with self._lock:
+            for game_id, process in list(self._running.items()):
+                returncode = process.poll()
+                if returncode is None:
+                    continue
+                del self._running[game_id]
+                game = self.database.get(game_id)
+                finished.append({
+                    "id": game_id,
+                    "name": game["name"] if game else "?",
+                    "returncode": returncode,
+                })
+            running = list(self._running)
+        return {
+            "running": running,
+            "finished": finished,
+            "stats": self.get_stats(),
+        }

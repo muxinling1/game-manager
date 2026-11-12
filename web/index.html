@@ -98,6 +98,14 @@
   .card.selected .name { color:var(--accent-hi); }
   .card .meta { font-size:10.5px; color:var(--muted2); margin-top:2px;
                 white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .badge-playing { position:absolute; top:8px; right:8px; font-size:10px; font-weight:600;
+                   padding:3px 7px; border-radius:4px; background:rgba(20,30,26,.86);
+                   color:var(--ok); border:1px solid rgba(67,192,136,.45);
+                   display:flex; align-items:center; gap:5px; z-index:2; }
+  .badge-playing .dot { width:6px; height:6px; border-radius:50%; background:var(--ok); }
+  .card.running .cover { border-color:var(--ok); box-shadow:0 0 0 3px rgba(67,192,136,.18); }
+  .list-view .badge-playing { display:none; }
+  .state-running { color:var(--ok) !important; }
 
   /* 列表视图 */
   .list-view .grid { display:block; }
@@ -254,7 +262,7 @@
       <div><h1 id="viewTitle">所有游戏</h1><div class="sub" id="viewSub">加载中…</div></div>
     </div>
     <div class="scroll">
-      <div class="list-head"><span></span><span>名称</span><span>标签</span><span>路径</span><span>次数</span><span>最后游玩</span></div>
+      <div class="list-head"><span></span><span>名称</span><span>标签</span><span>路径</span><span>次数</span><span>状态 / 最后游玩</span></div>
       <div class="grid" id="grid"></div>
       <div class="empty" id="empty" style="display:none">没有匹配的游戏，换个关键字或标签试试。</div>
     </div>
@@ -264,8 +272,9 @@
   <footer class="statusbar">
     <span class="live" id="bridgeState">● 等待桥接…</span>
     <span id="statusCount">共 0 款游戏</span>
-    <span>数据存于本地 games.db</span>
-    <span class="right"><span id="runtimeInfo">—</span><span>C2 · pywebview · W3</span></span>
+    <span id="runState">无运行中的游戏</span>
+    <span id="lastEvent">数据存于本地 games.db</span>
+    <span class="right"><span id="runtimeInfo">—</span><span>C2 · pywebview · W4</span></span>
   </footer>
 </div>
 
@@ -357,24 +366,27 @@
       {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   }
 
-  const state = { keyword:"", tag:"", view:"all", mode:"grid", rows:[], selected:null };
+  const state = { keyword:"", tag:"", view:"all", mode:"grid",
+                  rows:[], selected:null, running:[] };
   const $ = id => document.getElementById(id);
   const api = () => window.pywebview.api;
 
   function cardHtml(row) {
     const color = coverColor(row.name);
     const short = esc(row.last_played || "—");
-    return `<div class="card" data-id="${row.id}">
+    const running = state.running.includes(row.id);
+    return `<div class="card${running ? " running" : ""}" data-id="${row.id}">
       <div class="cover" style="background:${color}">
         <div class="grain"></div><div class="shine"></div>
         <div class="initials">${esc(initials(row.name))}</div>
         <div class="ph">COVER PLACEHOLDER</div>
+        ${running ? '<div class="badge-playing"><span class="dot"></span>运行中</div>' : ""}
       </div>
       <div class="name">${esc(row.name)}</div>
       <div class="meta m-sub">${esc(row.tags || "无标签")} · ${row.play_count} 次</div>
       <div class="meta m-path">${esc(row.path)}</div>
       <div class="meta m-plays">${row.play_count} 次</div>
-      <div class="meta m-state">${short}</div>
+      <div class="meta m-state${running ? " state-running" : ""}">${running ? "运行中" : short}</div>
     </div>`;
   }
 
@@ -446,9 +458,52 @@
       </div>
       <button class="btn" id="detailEdit" data-id="${row.id}">编辑</button>
       <button class="btn danger" id="detailDelete" data-id="${row.id}" data-name="${esc(row.name)}">删除</button>
-      <button class="btn-primary" disabled title="将在 W4 接入">▶ 启动（W4）</button>`;
+      <button class="btn-primary" id="detailLaunch" data-id="${row.id}">▶ 启动游戏</button>`;
     $("detailEdit").addEventListener("click", () => openEdit(row.id));
     $("detailDelete").addEventListener("click", () => askDelete(row.id, row.name));
+    $("detailLaunch").addEventListener("click", () => launchSelected(row.id));
+  }
+
+  async function launchSelected(id) {
+    const res = await api().launch_game(id);
+    if (!res.ok) {
+      $("lastEvent").textContent = `启动失败：${res.error}`;
+      $("lastEvent").style.color = "#e2685f";
+      return;
+    }
+    $("lastEvent").style.color = "";
+    const row = await api().get_game(id);
+    $("lastEvent").textContent = `「${row ? row.name : "游戏"}」已启动…`;
+    await pollStatus();
+  }
+
+  let lastRunningKey = "";
+  async function pollStatus() {
+    const st = await api().poll_status();
+    // 只在「运行中集合变化」或「刚有进程退出」时重建列表；
+    // 否则运行中期间每 700ms 换一次 DOM，按钮会一直被替换掉没法点。
+    const key = st.running.slice().sort((a, b) => a - b).join(",");
+    const changed = key !== lastRunningKey;
+    lastRunningKey = key;
+    state.running = st.running;
+    $("runState").textContent = st.running.length
+      ? `● ${st.running.length} 个游戏运行中` : "无运行中的游戏";
+    $("runState").style.color = st.running.length ? "var(--ok)" : "";
+    $("statTotal").textContent = st.stats.total;
+    $("statPlayed").textContent = st.stats.played;
+    $("statLaunches").textContent = `${st.stats.launches} 次`;
+    $("navCount").textContent = st.stats.total;
+    for (const ev of st.finished) {
+      const text = ev.returncode === 0
+        ? `「${ev.name}」正常退出`
+        : `「${ev.name}」异常退出（返回码 ${ev.returncode}）`;
+      $("lastEvent").textContent = text;
+      $("lastEvent").style.color = "";
+    }
+    if (changed || st.finished.length) {
+      await refreshGames();          // 刷新角标 / 状态列 / 次数
+      if (state.selected != null) await select(state.selected, null);
+    }
   }
 
   function setView(view) {
@@ -687,6 +742,8 @@
       $("runtimeInfo").textContent = String(e);
     }
     await Promise.all([refreshGames(), refreshSide()]);
+    // 主线程定时轮询（每 700ms），不另起后台线程操作窗口
+    setInterval(() => { pollStatus().catch(() => {}); }, 700);
   });
 </script>
 </body>
