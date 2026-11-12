@@ -112,6 +112,16 @@ class GameDB:
             ).fetchone()
             return dict(row) if row is not None else None
 
+    def record_play(self, game_id: int) -> bool:
+        """记一次游玩：写最后游玩时间、次数 +1；id 不存在返回 False。"""
+        with self._session() as conn:
+            cur = conn.execute(
+                "UPDATE games SET last_played = ?, play_count = play_count + 1 "
+                "WHERE id = ?",
+                (_now(), game_id),
+            )
+            return cur.rowcount > 0
+
     def list(self, keyword: str = "", tag: str = "") -> list[dict[str, Any]]:
         """按名称/路径/备注模糊搜索，再按标签精确过滤，结果按名称排序。"""
         sql = "SELECT * FROM games"

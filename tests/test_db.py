@@ -82,6 +82,18 @@ class GameDBTests(unittest.TestCase):
         self.assertIsNone(self.db.get(gid))
         self.assertFalse(self.db.delete(gid))
 
+    def test_record_play_accumulates(self):
+        gid = self._add()
+        self.assertTrue(self.db.record_play(gid))
+        row = self.db.get(gid)
+        self.assertEqual(row["play_count"], 1)
+        self.assertTrue(row["last_played"])
+        self.db.record_play(gid)
+        self.assertEqual(self.db.get(gid)["play_count"], 2)
+
+    def test_record_play_missing_id(self):
+        self.assertFalse(self.db.record_play(999999))
+
     def test_list_keyword_tag_and_order(self):
         self._add(name="Zelda", path=r"D:\Games\Z", exe="z.exe", tags="动作")
         self._add(name="Alpha", path=r"D:\Games\A", exe="a.exe", tags="独立, 动作")

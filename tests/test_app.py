@@ -48,6 +48,16 @@ class FormTests(unittest.TestCase):
         self.assertEqual(app.existing_keys(rows),
                          {("P", "a.exe"), ("P", "b.exe")})
 
+    def test_exit_text(self):
+        self.assertEqual(app.exit_text("Demo", 0), "「Demo」正常退出")
+        self.assertEqual(app.exit_text("Demo", 3), "「Demo」异常退出（返回码 3）")
+
+    def test_state_column_declared(self):
+        self.assertEqual(len(app.COLUMNS), 6)
+        self.assertIn("state", app.COLUMNS)
+        self.assertEqual(app.HEADERS["state"], "状态")
+        self.assertIn("state", app.WIDTHS)
+
     def test_app_module_imports_without_opening_a_window(self):
         self.assertTrue(callable(app.main))
         self.assertTrue(callable(app.GameManagerApp))

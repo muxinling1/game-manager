@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import sqlite3
+import subprocess
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -13,13 +14,13 @@ from typing import Any
 
 from src import db, launcher, scanner
 
-COLUMNS = ("name", "tags", "path", "last_played", "play_count")
+COLUMNS = ("name", "tags", "path", "last_played", "play_count", "state")
 HEADERS = {
     "name": "名称", "tags": "标签", "path": "路径",
-    "last_played": "最后游玩", "play_count": "次数",
+    "last_played": "最后游玩", "play_count": "次数", "state": "状态",
 }
 WIDTHS = {"name": 180, "tags": 100, "path": 320,
-          "last_played": 150, "play_count": 50}
+          "last_played": 150, "play_count": 50, "state": 80}
 FORM_FIELDS = ("name", "path", "exe", "args", "tags", "note")
 FORM_LABELS = {
     "name": "名称 *", "path": "游戏目录 *", "exe": "可执行文件 *",
@@ -43,6 +44,11 @@ def row_values(row: dict[str, Any]) -> tuple[str, str, str, str, str]:
 
 def existing_keys(rows: list[dict[str, Any]]) -> set[tuple[str, str]]:
     return {(r["path"], r["exe"]) for r in rows}
+
+
+def exit_text(name: str, returncode: int) -> str:
+    suffix = "正常退出" if returncode == 0 else f"异常退出（返回码 {returncode}）"
+    return f"「{name}」{suffix}"
 
 
 class GameDialog(tk.Toplevel):
@@ -185,7 +191,10 @@ class GameManagerApp:
         self.keyword = tk.StringVar()
         self.tag = tk.StringVar()
         self.row_ids: dict[str, int] = {}
+        self._running: dict[int, subprocess.Popen] = {}
+        self._poll_job: str | None = None
         self._build_ui()
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self.refresh()
 
     def _build_ui(self):
@@ -232,7 +241,8 @@ class GameManagerApp:
         self.row_ids.clear()
         rows = self.database.list(keyword=self.keyword.get(), tag=self.tag.get())
         for row in rows:
-            iid = self.tree.insert("", tk.END, values=row_values(row))
+            state = "运行中" if row["id"] in self._running else "已退出"
+            iid = self.tree.insert("", tk.END, values=(*row_values(row), state))
             self.row_ids[iid] = row["id"]
         self.status.configure(text=f"共 {len(rows)} 款游戏")
 
@@ -276,10 +286,44 @@ class GameManagerApp:
         if not game:
             return
         try:
-            launcher.launch(game)
-            self.status.configure(text=f"已启动「{game['name']}」")
+            process = launcher.launch(game)
         except OSError as exc:
-            messagebox.showerror("启动失败", str(exc), parent=self.root)
+            messagebox.showerror(
+                "启动失败",
+                f"无法启动「{game['name']}」\n\n{type(exc).__name__}: {exc}",
+                parent=self.root)
+            return
+        self.database.record_play(game["id"])
+        self._running[game["id"]] = process
+        self._start_polling()
+        self.refresh()
+        self.status.configure(text=f"「{game['name']}」运行中…")
+
+    def _start_polling(self):
+        if self._poll_job is None:
+            self._poll_job = self.root.after(500, self._poll)
+
+    def _poll(self):
+        # 用主线程定时轮询而非后台线程：Tkinter 控件只能由主线程更新，
+        # 跨线程调用 after 并不保证安全。poll() 非阻塞，开销可忽略。
+        self._poll_job = None
+        finished = [(gid, proc.returncode) for gid, proc in self._running.items()
+                    if proc.poll() is not None]
+        for game_id, _ in finished:
+            self._running.pop(game_id, None)
+        if finished:
+            self.refresh()
+            game_id, returncode = finished[-1]
+            game = self.database.get(game_id)
+            if game:
+                self.status.configure(text=exit_text(game["name"], returncode))
+        if self._running:
+            self._poll_job = self.root.after(500, self._poll)
+
+    def _on_close(self):
+        if self._poll_job is not None:
+            self.root.after_cancel(self._poll_job)
+        self.root.destroy()
 
 
 def main():
