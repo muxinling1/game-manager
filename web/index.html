@@ -190,9 +190,19 @@
   .root-item .path { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .root-item button { background:none; color:var(--muted2); font-size:14px; }
   .root-item button:hover { color:#e2685f; }
-  .cand-list { max-height:220px; }
+  .cand-list { max-height:260px; }
+  .group-head { display:flex; align-items:center; gap:8px; padding:8px 12px;
+                background:var(--panel3); font-size:12px; font-weight:600;
+                position:sticky; top:0; z-index:1; }
+  .group-head .cnt { margin-left:auto; font-weight:400; font-size:11px; color:var(--muted2); }
   .cand-item { display:flex; align-items:center; gap:10px; padding:8px 12px;
                font-size:12.5px; border-bottom:1px solid var(--line-soft); }
+  .cand-item.tool { opacity:.62; }
+  .cand-item.hidden-tool { display:none; }
+  .tag-rec { font-size:9.5px; color:var(--ok); border:1px solid rgba(67,192,136,.45);
+             border-radius:3px; padding:1px 5px; flex:none; }
+  .tag-tool { font-size:9.5px; color:var(--muted2); border:1px solid var(--line);
+              border-radius:3px; padding:1px 5px; flex:none; }
   .cand-item input { width:15px; height:15px; accent-color:var(--accent); flex:none; }
   .cand-item .info { min-width:0; }
   .cand-item .info b { display:block; font-weight:600; }
@@ -297,8 +307,12 @@
       <div class="root-list" id="rootList"></div>
       <div class="scan-row">
         <button class="btn-primary" id="scanRun">扫描</button>
+        <button class="btn" id="scanRecommend">仅推荐</button>
         <button class="btn" id="scanSelectAll">全选</button>
-        <span class="spacer" style="margin-left:auto"></span>
+        <button class="btn" id="scanSelectNone">全不选</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap">
+          <input type="checkbox" id="scanShowTools" style="accent-color:var(--accent)">显示工具项
+        </label>
       </div>
       <div class="hint" id="scanHint">尚未扫描。</div>
       <div class="cand-list" id="candList"></div>
@@ -462,7 +476,7 @@
 
   // ---------- W3：表单 / 扫描 / 删除 ----------
   const formState = { editingId: null };
-  const scanState = { roots: [], candidates: [] };
+  const scanState = { roots: [], groups: [], flat: [], showTools: false };
   const confirmState = { id: null };
 
   function showOverlay(id, on) {
@@ -545,14 +559,42 @@
   }
   function renderCandidates() {
     const list = $("candList");
-    if (!scanState.candidates.length) {
+    scanState.flat = [];
+    if (!scanState.groups.length) {
       list.innerHTML = `<div class="cand-item" style="color:var(--muted2)">（没有可导入的新游戏）</div>`;
       return;
     }
-    list.innerHTML = scanState.candidates.map((c, i) => `<label class="cand-item">
-      <input type="checkbox" data-i="${i}" checked>
-      <span class="info"><b>${esc(c.name)}</b><span>${esc(c.path)}\\${esc(c.exe)}</span></span>
-    </label>`).join("");
+    let html = "";
+    for (const g of scanState.groups) {
+      const toolCount = g.items.filter(it => it.tool).length;
+      html += `<div class="group-head"><span>▦ ${esc(g.name)}</span>
+        <span class="cnt">${g.items.length} 个 exe${toolCount ? ` · ${toolCount} 个工具项` : ""}</span></div>`;
+      for (const it of g.items) {
+        const idx = scanState.flat.length;
+        scanState.flat.push({ name: it.name, path: it.path, exe: it.exe });
+        const recommended = it.exe === g.recommended;
+        const hidden = it.tool && !scanState.showTools ? " hidden-tool" : "";
+        html += `<label class="cand-item${it.tool ? " tool" : ""}${hidden}" data-tool="${it.tool}">
+          <input type="checkbox" data-i="${idx}" ${recommended ? "checked" : ""}>
+          <span class="info"><b>${esc(it.exe)}</b>
+            <span>${esc(it.path)}\\${esc(it.exe)} · 匹配分 ${it.score}</span></span>
+          ${recommended ? '<span class="tag-rec">推荐主程序</span>' : ""}
+          ${it.tool ? '<span class="tag-tool">工具项</span>' : ""}
+        </label>`;
+      }
+    }
+    list.innerHTML = html;
+  }
+  function setChecks(mode) {
+    $("candList").querySelectorAll(".cand-item").forEach(row => {
+      const box = row.querySelector("input");
+      if (!box) return;
+      if (mode === "all") box.checked = !row.classList.contains("hidden-tool");
+      else if (mode === "none") box.checked = false;
+      else if (mode === "recommended") {
+        box.checked = !!row.querySelector(".tag-rec");
+      }
+    });
   }
   async function addRootFromInput() {
     const value = $("scanRootInput").value.trim();
@@ -575,14 +617,21 @@
     $("scanHint").textContent = "扫描中…";
     const res = await api().scan_preview(scanState.roots);
     if (!res.ok) { $("scanHint").textContent = res.error; return; }
-    scanState.candidates = res.candidates;
+    scanState.groups = res.groups || [];
     renderCandidates();
+    const total = res.candidates.length;
+    const toolTotal = scanState.groups.reduce(
+      (n, g) => n + g.items.filter(it => it.tool).length, 0);
     const err = (res.errors || []).length ? `，${res.errors.length} 个目录无效已跳过` : "";
-    $("scanHint").textContent = `发现 ${res.found} 个，其中 ${res.candidates.length} 个是新的${err}；勾选后导入。`;
+    $("scanHint").textContent =
+      `扫到 ${res.found} 个 exe，归为 ${scanState.groups.length} 个游戏目录；` +
+      `${total} 个可导入（其中 ${toolTotal} 个疑似工具项已默认隐藏）${err}。` +
+      `每组默认只勾推荐主程序，可自行改选。`;
   }
   async function doImport() {
     const checked = [...$("candList").querySelectorAll("input:checked")]
-      .map(el => scanState.candidates[+el.dataset.i]);
+      .map(el => scanState.flat[+el.dataset.i])
+      .filter(Boolean);
     if (!checked.length) { $("scanHint").textContent = "没有勾选任何候选项。"; return; }
     const res = await api().import_games(checked);
     $("scanFootInfo").textContent = `已导入 ${res.imported} 个，跳过 ${res.skipped} 个`;
@@ -599,7 +648,9 @@
   $("confirmYes").addEventListener("click", doDelete);
 
   $("btnScan").addEventListener("click", () => {
-    scanState.roots = []; scanState.candidates = [];
+    scanState.roots = []; scanState.groups = []; scanState.flat = [];
+    scanState.showTools = false;
+    $("scanShowTools").checked = false;
     renderRoots(); renderCandidates();
     $("scanHint").textContent = "尚未扫描。";
     $("scanFootInfo").textContent = "只有勾选的才会入库";
@@ -613,8 +664,14 @@
   });
   $("scanPick").addEventListener("click", pickRoots);
   $("scanRun").addEventListener("click", runScan);
-  $("scanSelectAll").addEventListener("click", () => {
-    $("candList").querySelectorAll("input[type=checkbox]").forEach(c => c.checked = true);
+  $("scanRecommend").addEventListener("click", () => setChecks("recommended"));
+  $("scanSelectAll").addEventListener("click", () => setChecks("all"));
+  $("scanSelectNone").addEventListener("click", () => setChecks("none"));
+  $("scanShowTools").addEventListener("change", e => {
+    scanState.showTools = e.target.checked;
+    $("candList").querySelectorAll(".cand-item[data-tool='true']").forEach(row => {
+      row.classList.toggle("hidden-tool", !scanState.showTools);
+    });
   });
   $("scanImport").addEventListener("click", doImport);
 

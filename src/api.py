@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import platform
 import sqlite3
+from pathlib import Path
 from typing import Any, Callable
 
 from src import db, scanner
@@ -121,25 +122,61 @@ class Bridge:
         """返回用户选中的目录；可注入假 picker 便于测试。"""
         return list(self.directory_picker() or [])
 
-    def scan_preview(self, roots: list[str]) -> dict[str, Any]:
-        """只读扫描，返回候选（绝不入库、绝不执行任何文件）。"""
+    def scan_preview(self, roots: list[str],
+                     max_depth: int = 2) -> dict[str, Any]:
+        """只读扫描，按游戏目录分组返回候选（绝不入库、绝不执行任何文件）。
+
+        ``candidates`` 保留扁平列表兼容旧调用方；``groups`` 供前端分组展示，
+        每组带 recommended（只是默认勾选建议，不删任何候选）。
+        """
         roots = [r for r in (roots or []) if r and r.strip()]
         if not roots:
-            return {"ok": False, "error": "请先添加至少一个目录", "candidates": []}
+            return {"ok": False, "error": "请先添加至少一个目录",
+                    "candidates": [], "groups": []}
         found: list[scanner.Candidate] = []
         errors: list[str] = []
-        for root in roots:
+        valid_roots: list[Path] = []
+        for item in roots:
             try:
-                found.extend(scanner.scan(root))
+                found.extend(scanner.scan(item, max_depth=max_depth))
+                valid_roots.append(Path(item).resolve())
             except ValueError as exc:
                 errors.append(str(exc))
         existing = {(r["path"], r["exe"]) for r in self.database.list()}
         fresh = scanner.filter_existing(scanner.dedupe(found), existing)
+
+        # 嵌套的多个根目录时，候选只归给最深（最长路径）的那个
+        owned_by_root: dict[Path, list[scanner.Candidate]] = {}
+        for candidate in fresh:
+            path = Path(candidate.path)
+            owners = [r for r in valid_roots if path.is_relative_to(r)]
+            if owners:
+                owner = max(owners, key=lambda r: len(str(r)))
+                owned_by_root.setdefault(owner, []).append(candidate)
+
+        groups: list[dict[str, Any]] = []
+        for root, owned in owned_by_root.items():
+            for group in scanner.group_candidates(root, owned):
+                groups.append({
+                    "name": group.name,
+                    "path": group.path,
+                    "recommended": (None if group.recommended is None
+                                    else group.recommended.exe),
+                    "items": [{
+                        "name": c.name,
+                        "path": c.path,
+                        "exe": c.exe,
+                        "tool": scanner.is_tool_exe(c.exe),
+                        "score": scanner.score_main(c, group.name, root),
+                    } for c in group.candidates],
+                })
+        groups.sort(key=lambda g: g["name"].lower())
         return {
             "ok": True,
             "found": len(found),
             "candidates": [{"name": c.name, "path": c.path, "exe": c.exe}
                            for c in fresh],
+            "groups": groups,
             "errors": errors,
         }
 
