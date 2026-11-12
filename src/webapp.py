@@ -41,7 +41,9 @@ def main() -> None:
     import webview  # noqa: E402  (延迟导入，保证未装依赖时也能给出提示)
     from src.api import Bridge  # noqa: E402
 
-    create_window(webview, Bridge())
+    bridge = Bridge()
+    bridge.init()          # CREATE TABLE IF NOT EXISTS，可重复调用
+    create_window(webview, bridge)
     webview.start()
 
 
