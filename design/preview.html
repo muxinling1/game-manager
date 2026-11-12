@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>本地游戏库管理器 · 界面样式稿（Playnite 风格）</title>
+<style>
+  :root {
+    --bg:          #15181e;   /* 窗口底色 */
+    --panel:       #1c2028;   /* 顶栏 / 侧栏 */
+    --panel-2:     #232833;   /* 卡片 / 输入框 */
+    --panel-3:     #2b3140;   /* hover */
+    --line:        #303644;   /* 分隔线 */
+    --line-soft:   #262b36;
+    --text:        #e7eaf1;
+    --muted:       #8d95a6;
+    --muted-2:     #666e80;
+    --accent:      #4c8bf5;
+    --accent-hi:   #6aa0ff;
+    --accent-soft: rgba(76,139,245,.16);
+    --ok:          #43c088;   /* 运行中 */
+    --star:        #f0b64a;
+    --radius:      8px;
+    --radius-sm:   5px;
+    font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0b0d11; color: var(--text); height: 100vh; overflow: hidden; }
+  button { font-family: inherit; cursor: pointer; border: 0; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #39404f; border-radius: 6px; border: 2px solid var(--bg); }
+
+  .window {
+    width: min(1280px, 100vw); height: min(820px, 100vh);
+    margin: 0 auto; display: grid;
+    grid-template-rows: 56px 1fr 34px;
+    grid-template-columns: 216px 1fr;
+    background: var(--bg);
+    border: 1px solid #000; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,.6);
+  }
+
+  /* ---------- 顶栏 ---------- */
+  .topbar {
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 14px;
+    padding: 0 18px; background: var(--panel);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 190px; }
+  .brand .logo {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: linear-gradient(135deg, var(--accent-hi), #8a5cf6);
+    display: grid; place-items: center; font-size: 15px; font-weight: 700; color: #fff;
+  }
+  .brand b { font-size: 14px; letter-spacing: .3px; }
+  .brand span { font-size: 11px; color: var(--muted-2); display: block; margin-top: 1px; }
+
+  .search {
+    flex: 1; max-width: 380px; height: 32px; display: flex; align-items: center; gap: 9px;
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 0 11px; color: var(--muted);
+  }
+  .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .search svg { flex: none; opacity: .7; }
+  .search input {
+    flex: 1; background: none; border: 0; outline: none;
+    color: var(--text); font-size: 13px; font-family: inherit;
+  }
+  .search input::placeholder { color: var(--muted-2); }
+  .search kbd {
+    font-family: inherit; font-size: 10px; color: var(--muted-2);
+    border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px;
+  }
+
+  .top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    width: 32px; height: 32px; border-radius: var(--radius-sm);
+    background: transparent; color: var(--muted); display: grid; place-items: center;
+  }
+  .icon-btn:hover { background: var(--panel-3); color: var(--text); }
+  .icon-btn.on { background: var(--accent-soft); color: var(--accent-hi); }
+  .seg { display: flex; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 2px; }
+  .seg button { background: none; color: var(--muted); border-radius: 3px; width: 30px; height: 26px; display: grid; place-items: center; }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .btn-primary {
+    height: 32px; padding: 0 14px; border-radius: var(--radius-sm);
+    background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 600;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .btn-primary:hover { background: var(--accent-hi); }
+
+  /* ---------- 侧栏 ---------- */
+  .sidebar {
+    background: var(--panel); border-right: 1px solid var(--line-soft);
+    padding: 14px 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px;
+  }
+  .side-title { font-size: 10.5px; letter-spacing: 1.1px; color: var(--muted-2); text-transform: uppercase; padding: 0 10px 8px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 11px; height: 34px; padding: 0 10px;
+    border-radius: var(--radius-sm); font-size: 13px; color: var(--muted);
+    cursor: pointer; border-left: 2px solid transparent;
+  }
+  .nav-item:hover { background: var(--panel-2); color: var(--text); }
+  .nav-item.on { background: var(--accent-soft); color: var(--accent-hi); border-left-color: var(--accent); }
+  .nav-item .ic { width: 16px; text-align: center; font-size: 14px; }
+  .nav-item .count { margin-left: auto; font-size: 11px; color: var(--muted-2); }
+  .nav-item.on .count { color: var(--accent-hi); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .stat-box {
+    margin: auto 4px 0; padding: 12px; border-radius: var(--radius);
+    background: var(--panel-2); border: 1px solid var(--line-soft); font-size: 11.5px; color: var(--muted);
+  }
+  .stat-box .row { display: flex; justify-content: space-between; padding: 3px 0; }
+  .stat-box b { color: var(--text); font-weight: 600; }
+  .stat-box hr { border: 0; border-top: 1px solid var(--line); margin: 8px 0; }
+
+  /* ---------- 主内容 ---------- */
+  .main { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+  .content-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px 10px; flex: none;
+  }
+  .content-head h1 { font-size: 17px; font-weight: 600; }
+  .content-head .sub { font-size: 12px; color: var(--muted-2); }
+  .chips { margin-left: auto; display: flex; gap: 7px; }
+  .chip {
+    font-size: 11.5px; color: var(--muted); padding: 5px 11px; border-radius: 20px;
+    background: var(--panel-2); border: 1px solid var(--line); cursor: pointer;
+  }
+  .chip:hover { color: var(--text); }
+  .chip.on { color: var(--accent-hi); border-color: var(--accent); background: var(--accent-soft); }
+
+  .scroll { flex: 1; overflow-y: auto; padding: 4px 20px 20px; }
+
+  /* 网格视图：竖版 2:3 封面卡片 */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(146px, 1fr)); gap: 18px 16px; }
+  .card { cursor: pointer; user-select: none; }
+  .cover {
+    position: relative; aspect-ratio: 2 / 3; border-radius: var(--radius);
+    overflow: hidden; border: 2px solid transparent;
+    display: grid; place-items: center;
+    box-shadow: 0 6px 16px rgba(0,0,0,.35);
+    transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease;
+  }
+  .card:hover .cover { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(0,0,0,.5); }
+  .card.selected .cover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), 0 10px 24px rgba(0,0,0,.5); }
+  .cover .initials { font-size: 40px; font-weight: 800; letter-spacing: -2px; color: rgba(255,255,255,.92); text-shadow: 0 2px 12px rgba(0,0,0,.4); }
+  .cover .grain { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px); background-size: 18px 18px; }
+  .cover .shine { position: absolute; inset: 0; background: linear-gradient(160deg, rgba(255,255,255,.16), transparent 55%); }
+  .cover .placeholder { position: absolute; bottom: 7px; left: 0; right: 0; text-align: center; font-size: 9px; letter-spacing: .6px; color: rgba(255,255,255,.5); }
+  .badge {
+    position: absolute; top: 8px; right: 8px; font-size: 10px; font-weight: 600;
+    padding: 3px 7px; border-radius: 4px; backdrop-filter: blur(6px);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .badge.playing { background: rgba(20,30,26,.82); color: var(--ok); border: 1px solid rgba(67,192,136,.4); }
+  .badge.star { background: rgba(30,25,12,.8); color: var(--star); border: 1px solid rgba(240,182,74,.35); top: auto; bottom: 8px; right: 8px; }
+  .card .name { font-size: 12.5px; margin-top: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card.selected .name { color: var(--accent-hi); }
+  .card .meta { font-size: 10.5px; color: var(--muted-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .m-path, .card .m-plays, .card .m-state { display: none; }
+
+  /* 列表视图 */
+  .list-view .grid { display: block; }
+  .list-view .card {
+    display: grid; grid-template-columns: 42px 1.6fr 1fr 1.2fr 70px 80px;
+    align-items: center; gap: 12px; height: 52px; padding: 0 10px; border-radius: var(--radius-sm);
+  }
+  .list-view .card:hover { background: var(--panel-2); }
+  .list-view .card.selected { background: var(--accent-soft); }
+  .list-view .cover { aspect-ratio: 2/3; width: 32px; height: 44px; border-radius: 3px; box-shadow: none; transform: none !important; }
+  .list-view .cover .initials { font-size: 13px; }
+  .list-view .cover .grain, .list-view .cover .shine, .list-view .cover .placeholder, .list-view .badge.star { display: none; }
+  .list-view .card .name { margin: 0; font-size: 13px; }
+  .list-view .card .meta { margin: 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list-view .card .m-path, .list-view .card .m-plays, .list-view .card .m-state { display: block; }
+  .list-view .card.selected .name { color: var(--accent-hi); }
+  .list-head {
+    display: none; grid-template-columns: 42px 1.6fr 1fr 1.2fr 70px 80px;
+    gap: 12px; padding: 0 10px 8px; font-size: 10.5px; letter-spacing: .8px;
+    text-transform: uppercase; color: var(--muted-2);
+  }
+  .list-view .list-head { display: grid; }
+
+  /* ---------- 详情条 ---------- */
+  .detail {
+    flex: none; margin: 0 20px 0; padding: 12px 16px; border-radius: var(--radius);
+    background: var(--panel-2); border: 1px solid var(--line);
+    display: flex; align-items: center; gap: 18px; min-height: 62px;
+  }
+  .detail .d-title { font-size: 13.5px; font-weight: 600; min-width: 150px; }
+  .detail .d-sub { font-size: 11px; color: var(--muted-2); margin-top: 3px; }
+  .detail .d-fields { display: flex; gap: 22px; font-size: 11.5px; color: var(--muted); }
+  .detail .d-fields b { display: block; color: var(--text); font-size: 12.5px; font-weight: 600; margin-top: 3px; }
+  .detail .btn-primary { margin-left: auto; }
+  .detail.empty { color: var(--muted-2); font-size: 12.5px; justify-content: center; }
+
+  /* ---------- 状态栏 ---------- */
+  .statusbar {
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 18px;
+    padding: 0 16px; background: var(--panel); border-top: 1px solid var(--line-soft);
+    font-size: 11px; color: var(--muted-2);
+  }
+  .statusbar .live { display: flex; align-items: center; gap: 6px; color: var(--ok); }
+  .statusbar .right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .zoom { width: 90px; height: 3px; background: var(--line); border-radius: 2px; position: relative; }
+  .zoom i { position: absolute; left: 55%; top: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); }
+
+  .note {
+    position: fixed; right: 18px; bottom: 12px; font-size: 11px; color: #6a7284;
+    background: rgba(0,0,0,.5); padding: 6px 10px; border-radius: 5px;
+  }
+</style>
+</head>
+<body>
+
+<div class="window">
+  <!-- 顶栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">G</div>
+      <div><b>本地游戏库</b><span>LOCAL GAME MANAGER</span></div>
+    </div>
+
+    <label class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" type="text" placeholder="搜索游戏名称、标签、路径…">
+      <kbd>Ctrl K</kbd>
+    </label>
+
+    <div class="top-actions">
+      <div class="seg" title="视图切换">
+        <button id="btn-grid" class="on" title="网格视图">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </button>
+        <button id="btn-list" title="列表视图">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4" width="18" height="3" rx="1"/><rect x="3" y="10.5" width="18" height="3" rx="1"/><rect x="3" y="17" width="18" height="3" rx="1"/></svg>
+        </button>
+      </div>
+      <button class="icon-btn" title="筛选">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
+      </button>
+      <button class="icon-btn" title="设置">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+      </button>
+      <button class="btn-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+        添加游戏
+      </button>
+    </div>
+  </header>
+
+  <!-- 侧栏 -->
+  <aside class="sidebar">
+    <div>
+      <div class="side-title">游戏库</div>
+      <div class="nav-item on"><span class="ic">▦</span>所有游戏<span class="count">8</span></div>
+      <div class="nav-item"><span class="ic">◷</span>最近游玩<span class="count">3</span></div>
+      <div class="nav-item"><span class="ic">★</span>收藏<span class="count">2</span></div>
+      <div class="nav-item"><span class="ic">↗</span>最多游玩<span class="count">—</span></div>
+    </div>
+
+    <div>
+      <div class="side-title">按标签筛选</div>
+      <div class="nav-item"><span class="dot" style="background:#e2685f"></span>动作<span class="count">3</span></div>
+      <div class="nav-item"><span class="dot" style="background:#5aa9e6"></span>角色扮演<span class="count">2</span></div>
+      <div class="nav-item"><span class="dot" style="background:#6fc48a"></span>独立<span class="count">4</span></div>
+      <div class="nav-item"><span class="dot" style="background:#c08ce0"></span>解谜<span class="count">1</span></div>
+    </div>
+
+    <div>
+      <div class="side-title">状态</div>
+      <div class="nav-item"><span class="dot" style="background:var(--ok)"></span>运行中<span class="count">1</span></div>
+      <div class="nav-item"><span class="dot" style="background:#5b6474"></span>已退出<span class="count">7</span></div>
+    </div>
+
+    <div class="stat-box">
+      <div class="row"><span>游戏总数</span><b>8</b></div>
+      <div class="row"><span>已启动过</span><b>5</b></div>
+      <div class="row"><span>累计启动</span><b>27 次</b></div>
+      <hr>
+      <div class="row"><span>数据文件</span><b>games.db</b></div>
+    </div>
+  </aside>
+
+  <!-- 主内容 -->
+  <section class="main">
+    <div class="content-head">
+      <div><h1>所有游戏</h1><div class="sub">共 8 款 · 按名称排序</div></div>
+      <div class="chips">
+        <span class="chip on">全部</span>
+        <span class="chip">动作</span>
+        <span class="chip">角色扮演</span>
+        <span class="chip">独立</span>
+        <span class="chip">解谜</span>
+      </div>
+    </div>
+
+    <div class="scroll">
+      <div class="list-head"><span></span><span>名称</span><span>标签</span><span>路径</span><span>次数</span><span>状态</span></div>
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="detail empty" id="detail">点击任意卡片查看信息与启动按钮</div>
+  </section>
+
+  <!-- 状态栏 -->
+  <footer class="statusbar">
+    <span class="live"><span class="dot" style="background:var(--ok)"></span>1 个游戏运行中</span>
+    <span>共 8 款游戏</span>
+    <span>断网可用 · 数据存于本地 games.db</span>
+    <div class="right">
+      <span>封面尺寸</span><div class="zoom"><i></i></div>
+      <span>v0.1 MVP</span>
+    </div>
+  </footer>
+</div>
+
+<div class="note">样式稿 · 封面为渐变占位（MVP 不抓取真实封面）· 网格 / 列表可切换</div>
+
+<script>
+const GAMES = [
+  { name: "ELDEN RING",      sub: "艾尔登法环",   tags: "动作, 角色扮演", path: "D:\\Games\\ELDEN RING", plays: 12, state: "运行中", star: true,  a: "#3b2f6b", b: "#c08a4a", ini: "ER" },
+  { name: "Stardew Valley",  sub: "星露谷物语",   tags: "独立, 模拟",     path: "D:\\Games\\Stardew",   plays: 8,  state: "已退出", star: false, a: "#2f6b4a", b: "#8fc46a", ini: "SV" },
+  { name: "Hollow Knight",   sub: "空洞骑士",     tags: "动作, 独立",     path: "D:\\Games\\Hollow",    plays: 4,  state: "已退出", star: true,  a: "#1f3a5c", b: "#4a86b8", ini: "HK" },
+  { name: "Cyberpunk 2077",  sub: "赛博朋克2077", tags: "动作, 角色扮演", path: "E:\\Games\\CP2077",    plays: 3,  state: "已退出", star: false, a: "#7a5b17", b: "#d94f6a", ini: "CP" },
+  { name: "Hades",           sub: "哈迪斯",       tags: "动作, 独立",     path: "D:\\Games\\Hades",     plays: 0,  state: "已退出", star: false, a: "#6b2323", b: "#d9743a", ini: "HD" },
+  { name: "Terraria",        sub: "泰拉瑞亚",     tags: "独立, 冒险",     path: "D:\\Games\\Terraria",  plays: 0,  state: "已退出", star: false, a: "#2d6b63", b: "#7fc4a8", ini: "TR" },
+  { name: "Baldur's Gate 3", sub: "博德之门3",    tags: "角色扮演",       path: "E:\\Games\\BG3",       plays: 0,  state: "已退出", star: false, a: "#4a2f5c", b: "#a86ab8", ini: "B3" },
+  { name: "Portal 2",        sub: "传送门2",      tags: "解谜",           path: "D:\\Games\\Portal2",   plays: 0,  state: "已退出", star: false, a: "#2b4a6b", b: "#e0a24a", ini: "P2" },
+];
+
+const grid = document.getElementById("grid");
+const detail = document.getElementById("detail");
+
+function render(list) {
+  grid.innerHTML = list.map((g, i) => `
+    <div class="card" data-i="${GAMES.indexOf(g)}">
+      <div class="cover" style="background:linear-gradient(150deg, ${g.a}, ${g.b})">
+        <div class="grain"></div><div class="shine"></div>
+        <div class="initials">${g.ini}</div>
+        <div class="placeholder">COVER PLACEHOLDER</div>
+        ${g.state === "运行中" ? '<div class="badge playing"><span class="dot" style="background:var(--ok)"></span>运行中</div>' : ''}
+        ${g.star ? '<div class="badge star">★</div>' : ''}
+      </div>
+      <div class="name">${g.name}</div>
+      <div class="meta m-sub">${g.sub} · ${g.tags}</div>
+      <div class="meta m-path">${g.path}</div>
+      <div class="meta m-plays">${g.plays} 次</div>
+      <div class="meta m-state">${g.state}</div>
+    </div>`).join("");
+
+  grid.querySelectorAll(".card").forEach(card => {
+    card.addEventListener("click", () => select(card));
+  });
+}
+
+function select(card) {
+  grid.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
+  card.classList.add("selected");
+  const g = GAMES[+card.dataset.i];
+  detail.className = "detail";
+  detail.innerHTML = `
+    <div><div class="d-title">${g.name}</div><div class="d-sub">${g.sub}</div></div>
+    <div class="d-fields">
+      <div>标签<b>${g.tags}</b></div>
+      <div>游玩次数<b>${g.plays} 次</b></div>
+      <div>状态<b style="color:${g.state === "运行中" ? "var(--ok)" : "var(--muted)"}">${g.state}</b></div>
+      <div>路径<b style="font-size:11px;color:var(--muted)">${g.path}</b></div>
+    </div>
+    <button class="btn-primary">▶ 启动游戏</button>`;
+}
+
+// 网格 / 列表切换
+const main = document.querySelector(".main");
+document.getElementById("btn-grid").onclick = () => {
+  main.classList.remove("list-view");
+  document.getElementById("btn-grid").classList.add("on");
+  document.getElementById("btn-list").classList.remove("on");
+};
+document.getElementById("btn-list").onclick = () => {
+  main.classList.add("list-view");
+  document.getElementById("btn-list").classList.add("on");
+  document.getElementById("btn-grid").classList.remove("on");
+};
+
+// 搜索过滤
+document.getElementById("q").addEventListener("input", e => {
+  const k = e.target.value.trim().toLowerCase();
+  render(GAMES.filter(g => !k || (g.name + g.sub + g.tags + g.path).toLowerCase().includes(k)));
+});
+
+// 标签 chips
+document.querySelectorAll(".chip").forEach(chip => chip.onclick = () => {
+  document.querySelectorAll(".chip").forEach(c => c.classList.remove("on"));
+  chip.classList.add("on");
+  const k = chip.textContent.trim();
+  render(k === "全部" ? GAMES : GAMES.filter(g => g.tags.includes(k)));
+});
+
+render(GAMES);
+</script>
+</body>
+</html>

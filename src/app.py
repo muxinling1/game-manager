@@ -12,7 +12,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import Any
 
-from src import db, launcher, scanner
+from src import db, launcher, scanner, theme
 
 COLUMNS = ("name", "tags", "path", "last_played", "play_count", "state")
 HEADERS = {
@@ -77,6 +77,7 @@ class GameDialog(tk.Toplevel):
         ttk.Button(bar, text="取消", command=self.destroy).pack(side="left", padx=6)
         self.bind("<Return>", lambda _event: self._on_ok())
         self.bind("<Escape>", lambda _event: self.destroy())
+        theme.tint_native(self)
         self.grab_set()
         self.wait_window()
 
@@ -130,6 +131,7 @@ class ScanDialog(tk.Toplevel):
             side="right", padx=3)
         ttk.Button(bottom, text="关闭", command=self.destroy).pack(
             side="right", padx=3)
+        theme.tint_native(self)
         self.grab_set()
         self.wait_window()
 
@@ -186,6 +188,7 @@ class ScanDialog(tk.Toplevel):
 class GameManagerApp:
     def __init__(self, root: tk.Tk, database: db.GameDB | None = None):
         self.root = root
+        theme.apply_theme(self.root)
         self.database = database or db.GameDB()
         self.database.init()
         self.keyword = tk.StringVar()
@@ -233,8 +236,10 @@ class GameManagerApp:
         self.tree.pack(side="left", fill="both", expand=True)
         self.tree.bind("<Double-1>", lambda _event: self._on_launch())
 
-        self.status = ttk.Label(self.root, text="", anchor="w")
+        self.status = ttk.Label(self.root, text="", anchor="w",
+                                style="Status.TLabel")
         self.status.pack(fill="x", padx=8, pady=4)
+        theme.tint_native(self.root)
 
     def refresh(self):
         self.tree.delete(*self.tree.get_children())
