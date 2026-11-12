@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>本地游戏库管理器 · W1 骨架</title>
+<style>
+  :root {
+    --bg:#15181e; --panel:#1c2028; --panel2:#232833; --panel3:#2b3140;
+    --line:#303644; --text:#e7eaf1; --muted:#8d95a6; --muted2:#666e80;
+    --accent:#4c8bf5; --accent-hi:#6aa0ff; --ok:#43c088;
+    font-family:"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); height:100vh; overflow:hidden; }
+  .window { display:grid; grid-template-rows:56px 1fr 34px; grid-template-columns:216px 1fr; height:100vh; }
+
+  .topbar { grid-column:1/-1; display:flex; align-items:center; gap:14px; padding:0 18px;
+            background:var(--panel); border-bottom:1px solid #262b36; }
+  .logo { width:26px; height:26px; border-radius:7px; display:grid; place-items:center;
+          background:linear-gradient(135deg,var(--accent-hi),#8a5cf6); color:#fff; font-weight:700; }
+  .brand b { font-size:14px; }
+  .brand span { display:block; font-size:10px; color:var(--muted2); letter-spacing:1px; }
+  .stage { margin-left:auto; font-size:11px; color:var(--muted2); }
+
+  .sidebar { background:var(--panel); border-right:1px solid #262b36; padding:16px 10px; }
+  .side-title { font-size:10px; letter-spacing:1px; color:var(--muted2); padding:0 10px 8px; text-transform:uppercase; }
+  .nav { height:34px; display:flex; align-items:center; gap:10px; padding:0 10px; border-radius:5px;
+         font-size:13px; color:var(--muted); }
+  .nav.on { background:rgba(76,139,245,.16); color:var(--accent-hi); }
+
+  .main { padding:26px 28px; overflow:auto; }
+  h1 { font-size:20px; font-weight:600; }
+  .sub { font-size:12px; color:var(--muted2); margin-top:6px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; margin-top:26px; }
+  .card { background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:18px; }
+  .card .k { font-size:11px; color:var(--muted2); letter-spacing:.5px; }
+  .card .v { font-size:16px; margin-top:10px; font-weight:600; word-break:break-all; }
+  .card .v.wait { color:var(--muted2); }
+  .card .v.ok { color:var(--ok); }
+  .card .v.err { color:#e2685f; }
+  .note { margin-top:26px; padding:14px 16px; border-radius:8px; background:var(--panel2);
+          border:1px solid var(--line); font-size:12px; color:var(--muted); line-height:1.8; }
+  .note b { color:var(--text); }
+
+  .statusbar { grid-column:1/-1; display:flex; align-items:center; gap:18px; padding:0 16px;
+               background:var(--panel); border-top:1px solid #262b36; font-size:11px; color:var(--muted2); }
+  .statusbar .right { margin-left:auto; }
+</style>
+</head>
+<body>
+<div class="window">
+  <header class="topbar">
+    <div class="logo">G</div>
+    <div class="brand"><b>本地游戏库</b><span>LOCAL GAME MANAGER</span></div>
+    <div class="stage">W1 骨架 · 依赖与桥接验证</div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="side-title">游戏库</div>
+    <div class="nav on">▦　所有游戏</div>
+    <div class="nav">◷　最近游玩</div>
+    <div class="side-title" style="margin-top:22px">状态</div>
+    <div class="nav">●　运行中</div>
+  </aside>
+
+  <section class="main">
+    <h1>W1 · 前端骨架已加载</h1>
+    <div class="sub">这一页由 pywebview 直接从本地文件加载，没有启动任何 HTTP 服务。</div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="k">PYTHON 桥接</div>
+        <div class="v wait" id="bridge">等待 pywebviewready…</div>
+      </div>
+      <div class="card">
+        <div class="k">后端版本</div>
+        <div class="v wait" id="version">—</div>
+      </div>
+      <div class="card">
+        <div class="k">往返调用 ping()</div>
+        <div class="v wait" id="ping">—</div>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>当前进度</b><br>
+      W1 只验证三件事：依赖能装进 <code>vendor/</code>、窗口能弹出、前端 JS 能调到 Python。<br>
+      <b>W2</b> 会把 <code>db.py / scanner.py / launcher.py</code> 接到桥接层，让列表、搜索、标签筛选显示真实数据。<br>
+      <b>W3 / W4</b> 再补增删改、扫描导入、启动与状态回传。
+    </div>
+  </section>
+
+  <footer class="statusbar">
+    <span>数据存于本地 games.db</span>
+    <span class="right">C2 · pywebview + WebView2 · v0.1 W1</span>
+  </footer>
+</div>
+
+<script>
+  function set(id, text, cls) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'v ' + cls;
+  }
+  window.addEventListener('pywebviewready', function () {
+    const api = window.pywebview.api;
+    set('bridge', '桥接已打通', 'ok');
+    api.get_version()
+      .then(v => set('version', v, 'ok'))
+      .catch(e => set('version', String(e), 'err'));
+    api.ping()
+      .then(v => set('ping', v, 'ok'))
+      .catch(e => set('ping', String(e), 'err'));
+  });
+</script>
+</body>
+</html>

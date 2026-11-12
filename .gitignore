@@ -25,6 +25,9 @@ __pycache__/
 *.dll
 *.msi
 
+# C2 前端依赖：由 setup.bat 生成，含 .pyd 二进制与本机解释器记录，不进仓库
+vendor/
+
 # 凭据
 .env
 *.key
