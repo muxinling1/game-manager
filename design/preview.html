@@ -2,404 +2,838 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>本地游戏库管理器 · 界面样式稿（Playnite 风格）</title>
+<title>本地游戏库管理器 · 界面样式稿（静态预览）</title>
+<!-- 由 web/index.html 同步生成：CSS 与 DOM 结构同源，仅把 pywebview 桥接
+     换成假数据，便于双击浏览器查看。实际入口是 web/index.html + run.bat。 -->
 <style>
   :root {
-    --bg:          #15181e;   /* 窗口底色 */
-    --panel:       #1c2028;   /* 顶栏 / 侧栏 */
-    --panel-2:     #232833;   /* 卡片 / 输入框 */
-    --panel-3:     #2b3140;   /* hover */
-    --line:        #303644;   /* 分隔线 */
-    --line-soft:   #262b36;
-    --text:        #e7eaf1;
-    --muted:       #8d95a6;
-    --muted-2:     #666e80;
-    --accent:      #4c8bf5;
-    --accent-hi:   #6aa0ff;
-    --accent-soft: rgba(76,139,245,.16);
-    --ok:          #43c088;   /* 运行中 */
-    --star:        #f0b64a;
-    --radius:      8px;
-    --radius-sm:   5px;
-    font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    --bg:#15181e; --panel:#1c2028; --panel2:#232833; --panel3:#2b3140;
+    --line:#303644; --line-soft:#262b36; --text:#e7eaf1; --muted:#8d95a6;
+    --muted2:#666e80; --accent:#4c8bf5; --accent-hi:#6aa0ff;
+    --accent-soft:rgba(76,139,245,.16); --ok:#43c088; --star:#f0b64a;
+    font-family:"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
   }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); height:100vh; overflow:hidden; }
+  button { font-family:inherit; cursor:pointer; border:0; }
+  ::-webkit-scrollbar { width:10px; height:10px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:#39404f; border-radius:6px; border:2px solid var(--bg); }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0b0d11; color: var(--text); height: 100vh; overflow: hidden; }
-  button { font-family: inherit; cursor: pointer; border: 0; }
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #39404f; border-radius: 6px; border: 2px solid var(--bg); }
+  .window { display:grid; grid-template-rows:56px 1fr 34px;
+            grid-template-columns:216px 1fr; height:100vh; }
 
-  .window {
-    width: min(1280px, 100vw); height: min(820px, 100vh);
-    margin: 0 auto; display: grid;
-    grid-template-rows: 56px 1fr 34px;
-    grid-template-columns: 216px 1fr;
-    background: var(--bg);
-    border: 1px solid #000; border-radius: 10px; overflow: hidden;
-    box-shadow: 0 24px 80px rgba(0,0,0,.6);
-  }
+  /* 顶栏 */
+  .topbar { grid-column:1/-1; display:flex; align-items:center; gap:14px;
+            padding:0 16px; background:var(--panel); border-bottom:1px solid var(--line-soft); }
+  .logo { width:26px; height:26px; border-radius:7px; display:grid; place-items:center;
+          background:linear-gradient(135deg,var(--accent-hi),#8a5cf6); color:#fff; font-weight:700; flex:none; }
+  .brand b { font-size:14px; }
+  .brand span { display:block; font-size:10px; color:var(--muted2); letter-spacing:1px; }
+  .search { flex:1; max-width:340px; height:32px; display:flex; align-items:center; gap:9px;
+            background:var(--panel2); border:1px solid var(--line); border-radius:5px;
+            padding:0 11px; margin-left:10px; color:var(--muted); }
+  .search:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .search input { flex:1; background:none; border:0; outline:none; color:var(--text);
+                  font-size:13px; font-family:inherit; }
+  .search input::placeholder { color:var(--muted2); }
+  .tag-input { height:32px; width:120px; background:var(--panel2); border:1px solid var(--line);
+               border-radius:5px; padding:0 10px; color:var(--text); font-size:12px;
+               font-family:inherit; outline:none; }
+  .tag-input:focus { border-color:var(--accent); }
+  .top-actions { margin-left:auto; display:flex; align-items:center; gap:8px; }
+  .icon-btn { width:32px; height:32px; border-radius:5px; background:transparent;
+              color:var(--muted); display:grid; place-items:center; font-size:14px; }
+  .icon-btn:hover { background:var(--panel3); color:var(--text); }
+  .icon-btn.on { background:var(--accent-soft); color:var(--accent-hi); }
+  .seg { display:flex; background:var(--panel2); border:1px solid var(--line); border-radius:5px; padding:2px; }
+  .seg button { background:none; color:var(--muted); border-radius:3px; width:30px; height:26px;
+                display:grid; place-items:center; font-size:13px; }
+  .seg button.on { background:var(--accent); color:#fff; }
+  .btn-primary { height:32px; padding:0 14px; border-radius:5px; background:var(--accent);
+                 color:#fff; font-size:12.5px; font-weight:600; }
+  .btn-primary:hover { background:var(--accent-hi); }
+  .btn-primary:disabled { background:var(--panel3); color:var(--muted2); cursor:not-allowed; }
 
-  /* ---------- 顶栏 ---------- */
-  .topbar {
-    grid-column: 1 / -1; display: flex; align-items: center; gap: 14px;
-    padding: 0 18px; background: var(--panel);
-    border-bottom: 1px solid var(--line-soft);
-  }
-  .brand { display: flex; align-items: center; gap: 10px; min-width: 190px; }
-  .brand .logo {
-    width: 26px; height: 26px; border-radius: 7px;
-    background: linear-gradient(135deg, var(--accent-hi), #8a5cf6);
-    display: grid; place-items: center; font-size: 15px; font-weight: 700; color: #fff;
-  }
-  .brand b { font-size: 14px; letter-spacing: .3px; }
-  .brand span { font-size: 11px; color: var(--muted-2); display: block; margin-top: 1px; }
+  /* 左栏 */
+  .sidebar { background:var(--panel); border-right:1px solid var(--line-soft);
+             padding:14px 10px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
+  .side-title { font-size:10px; letter-spacing:1px; color:var(--muted2);
+                padding:10px 10px 6px; text-transform:uppercase; }
+  .nav { display:flex; align-items:center; gap:10px; height:34px; padding:0 10px;
+         border-radius:5px; font-size:13px; color:var(--muted); background:none;
+         width:100%; text-align:left; border-left:2px solid transparent; }
+  .nav:hover { background:var(--panel2); color:var(--text); }
+  .nav.on { background:var(--accent-soft); color:var(--accent-hi); border-left-color:var(--accent); }
+  .nav .count { margin-left:auto; font-size:11px; color:var(--muted2); }
+  .nav.on .count { color:var(--accent-hi); }
+  .dot { width:7px; height:7px; border-radius:50%; display:inline-block; flex:none; }
+  .stat-box { margin-top:auto; padding:12px; border-radius:8px; background:var(--panel2);
+              border:1px solid var(--line-soft); font-size:11.5px; color:var(--muted); }
+  .stat-box .row { display:flex; justify-content:space-between; padding:3px 0; }
+  .stat-box b { color:var(--text); font-weight:600; }
+  .stat-box hr { border:0; border-top:1px solid var(--line); margin:8px 0; }
 
-  .search {
-    flex: 1; max-width: 380px; height: 32px; display: flex; align-items: center; gap: 9px;
-    background: var(--panel-2); border: 1px solid var(--line);
-    border-radius: var(--radius-sm); padding: 0 11px; color: var(--muted);
-  }
-  .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-  .search svg { flex: none; opacity: .7; }
-  .search input {
-    flex: 1; background: none; border: 0; outline: none;
-    color: var(--text); font-size: 13px; font-family: inherit;
-  }
-  .search input::placeholder { color: var(--muted-2); }
-  .search kbd {
-    font-family: inherit; font-size: 10px; color: var(--muted-2);
-    border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px;
-  }
+  /* 主区 */
+  .main { display:flex; flex-direction:column; min-width:0; overflow:hidden; }
+  .content-head { display:flex; align-items:center; gap:12px; padding:16px 20px 10px; flex:none; }
+  .content-head h1 { font-size:17px; font-weight:600; }
+  .content-head .sub { font-size:12px; color:var(--muted2); }
+  .scroll { flex:1; overflow-y:auto; padding:4px 20px 16px; }
 
-  .top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-  .icon-btn {
-    width: 32px; height: 32px; border-radius: var(--radius-sm);
-    background: transparent; color: var(--muted); display: grid; place-items: center;
-  }
-  .icon-btn:hover { background: var(--panel-3); color: var(--text); }
-  .icon-btn.on { background: var(--accent-soft); color: var(--accent-hi); }
-  .seg { display: flex; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 2px; }
-  .seg button { background: none; color: var(--muted); border-radius: 3px; width: 30px; height: 26px; display: grid; place-items: center; }
-  .seg button.on { background: var(--accent); color: #fff; }
-  .btn-primary {
-    height: 32px; padding: 0 14px; border-radius: var(--radius-sm);
-    background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 600;
-    display: flex; align-items: center; gap: 7px;
-  }
-  .btn-primary:hover { background: var(--accent-hi); }
-
-  /* ---------- 侧栏 ---------- */
-  .sidebar {
-    background: var(--panel); border-right: 1px solid var(--line-soft);
-    padding: 14px 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px;
-  }
-  .side-title { font-size: 10.5px; letter-spacing: 1.1px; color: var(--muted-2); text-transform: uppercase; padding: 0 10px 8px; }
-  .nav-item {
-    display: flex; align-items: center; gap: 11px; height: 34px; padding: 0 10px;
-    border-radius: var(--radius-sm); font-size: 13px; color: var(--muted);
-    cursor: pointer; border-left: 2px solid transparent;
-  }
-  .nav-item:hover { background: var(--panel-2); color: var(--text); }
-  .nav-item.on { background: var(--accent-soft); color: var(--accent-hi); border-left-color: var(--accent); }
-  .nav-item .ic { width: 16px; text-align: center; font-size: 14px; }
-  .nav-item .count { margin-left: auto; font-size: 11px; color: var(--muted-2); }
-  .nav-item.on .count { color: var(--accent-hi); }
-  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-  .stat-box {
-    margin: auto 4px 0; padding: 12px; border-radius: var(--radius);
-    background: var(--panel-2); border: 1px solid var(--line-soft); font-size: 11.5px; color: var(--muted);
-  }
-  .stat-box .row { display: flex; justify-content: space-between; padding: 3px 0; }
-  .stat-box b { color: var(--text); font-weight: 600; }
-  .stat-box hr { border: 0; border-top: 1px solid var(--line); margin: 8px 0; }
-
-  /* ---------- 主内容 ---------- */
-  .main { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
-  .content-head {
-    display: flex; align-items: center; gap: 12px;
-    padding: 16px 20px 10px; flex: none;
-  }
-  .content-head h1 { font-size: 17px; font-weight: 600; }
-  .content-head .sub { font-size: 12px; color: var(--muted-2); }
-  .chips { margin-left: auto; display: flex; gap: 7px; }
-  .chip {
-    font-size: 11.5px; color: var(--muted); padding: 5px 11px; border-radius: 20px;
-    background: var(--panel-2); border: 1px solid var(--line); cursor: pointer;
-  }
-  .chip:hover { color: var(--text); }
-  .chip.on { color: var(--accent-hi); border-color: var(--accent); background: var(--accent-soft); }
-
-  .scroll { flex: 1; overflow-y: auto; padding: 4px 20px 20px; }
-
-  /* 网格视图：竖版 2:3 封面卡片 */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(146px, 1fr)); gap: 18px 16px; }
-  .card { cursor: pointer; user-select: none; }
-  .cover {
-    position: relative; aspect-ratio: 2 / 3; border-radius: var(--radius);
-    overflow: hidden; border: 2px solid transparent;
-    display: grid; place-items: center;
-    box-shadow: 0 6px 16px rgba(0,0,0,.35);
-    transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease;
-  }
-  .card:hover .cover { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(0,0,0,.5); }
-  .card.selected .cover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), 0 10px 24px rgba(0,0,0,.5); }
-  .cover .initials { font-size: 40px; font-weight: 800; letter-spacing: -2px; color: rgba(255,255,255,.92); text-shadow: 0 2px 12px rgba(0,0,0,.4); }
-  .cover .grain { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px); background-size: 18px 18px; }
-  .cover .shine { position: absolute; inset: 0; background: linear-gradient(160deg, rgba(255,255,255,.16), transparent 55%); }
-  .cover .placeholder { position: absolute; bottom: 7px; left: 0; right: 0; text-align: center; font-size: 9px; letter-spacing: .6px; color: rgba(255,255,255,.5); }
-  .badge {
-    position: absolute; top: 8px; right: 8px; font-size: 10px; font-weight: 600;
-    padding: 3px 7px; border-radius: 4px; backdrop-filter: blur(6px);
-    display: flex; align-items: center; gap: 5px;
-  }
-  .badge.playing { background: rgba(20,30,26,.82); color: var(--ok); border: 1px solid rgba(67,192,136,.4); }
-  .badge.star { background: rgba(30,25,12,.8); color: var(--star); border: 1px solid rgba(240,182,74,.35); top: auto; bottom: 8px; right: 8px; }
-  .card .name { font-size: 12.5px; margin-top: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card.selected .name { color: var(--accent-hi); }
-  .card .meta { font-size: 10.5px; color: var(--muted-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card .m-path, .card .m-plays, .card .m-state { display: none; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(146px,1fr)); gap:18px 16px; }
+  .card { cursor:pointer; user-select:none; }
+  .cover { position:relative; aspect-ratio:2/3; border-radius:8px; overflow:hidden;
+           border:2px solid transparent; display:grid; place-items:center;
+           box-shadow:0 6px 16px rgba(0,0,0,.35); transition:transform .14s,border-color .14s; }
+  .card:hover .cover { transform:translateY(-3px); }
+  .card.selected .cover { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .cover .initials { font-size:38px; font-weight:800; letter-spacing:-2px;
+                     color:rgba(255,255,255,.92); text-shadow:0 2px 12px rgba(0,0,0,.4); }
+  .cover .grain { position:absolute; inset:0; background-image:
+      linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px); background-size:18px 18px; }
+  .cover .shine { position:absolute; inset:0; background:linear-gradient(160deg,rgba(255,255,255,.16),transparent 55%); }
+  .cover .ph { position:absolute; bottom:7px; left:0; right:0; text-align:center;
+               font-size:9px; letter-spacing:.6px; color:rgba(255,255,255,.5); }
+  .card .name { font-size:12.5px; margin-top:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card.selected .name { color:var(--accent-hi); }
+  .card .meta { font-size:10.5px; color:var(--muted2); margin-top:2px;
+                white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .badge-playing { position:absolute; top:8px; right:8px; font-size:10px; font-weight:600;
+                   padding:3px 7px; border-radius:4px; background:rgba(20,30,26,.86);
+                   color:var(--ok); border:1px solid rgba(67,192,136,.45);
+                   display:flex; align-items:center; gap:5px; z-index:2; }
+  .badge-playing .dot { width:6px; height:6px; border-radius:50%; background:var(--ok); }
+  .card.running .cover { border-color:var(--ok); box-shadow:0 0 0 3px rgba(67,192,136,.18); }
+  .list-view .badge-playing { display:none; }
+  .state-running { color:var(--ok) !important; }
 
   /* 列表视图 */
-  .list-view .grid { display: block; }
-  .list-view .card {
-    display: grid; grid-template-columns: 42px 1.6fr 1fr 1.2fr 70px 80px;
-    align-items: center; gap: 12px; height: 52px; padding: 0 10px; border-radius: var(--radius-sm);
-  }
-  .list-view .card:hover { background: var(--panel-2); }
-  .list-view .card.selected { background: var(--accent-soft); }
-  .list-view .cover { aspect-ratio: 2/3; width: 32px; height: 44px; border-radius: 3px; box-shadow: none; transform: none !important; }
-  .list-view .cover .initials { font-size: 13px; }
-  .list-view .cover .grain, .list-view .cover .shine, .list-view .cover .placeholder, .list-view .badge.star { display: none; }
-  .list-view .card .name { margin: 0; font-size: 13px; }
-  .list-view .card .meta { margin: 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .list-view .card .m-path, .list-view .card .m-plays, .list-view .card .m-state { display: block; }
-  .list-view .card.selected .name { color: var(--accent-hi); }
-  .list-head {
-    display: none; grid-template-columns: 42px 1.6fr 1fr 1.2fr 70px 80px;
-    gap: 12px; padding: 0 10px 8px; font-size: 10.5px; letter-spacing: .8px;
-    text-transform: uppercase; color: var(--muted-2);
-  }
-  .list-view .list-head { display: grid; }
+  .list-view .grid { display:block; }
+  .list-head { display:none; grid-template-columns:42px 1.6fr 1fr 1.2fr 70px 80px;
+               gap:12px; padding:0 10px 8px; font-size:10.5px; letter-spacing:.8px;
+               text-transform:uppercase; color:var(--muted2); }
+  .list-view .list-head { display:grid; }
+  .list-view .card { display:grid; grid-template-columns:42px 1.6fr 1fr 1.2fr 70px 80px;
+                     align-items:center; gap:12px; height:52px; padding:0 10px; border-radius:5px; }
+  .list-view .card:hover { background:var(--panel2); }
+  .list-view .card.selected { background:var(--accent-soft); }
+  .list-view .cover { width:32px; height:44px; border-radius:3px; aspect-ratio:auto;
+                      box-shadow:none; transform:none !important; }
+  .list-view .cover .initials { font-size:13px; }
+  .list-view .cover .grain, .list-view .cover .shine, .list-view .cover .ph { display:none; }
+  .list-view .card .name { margin:0; font-size:13px; }
+  .list-view .card .meta { margin:0; font-size:12px; color:var(--muted);
+                           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .list-view .card .m-path, .list-view .card .m-plays, .list-view .card .m-state { display:block; }
+  .card .m-path, .card .m-plays, .card .m-state { display:none; }
+  .list-view .card.selected .name { color:var(--accent-hi); }
 
-  /* ---------- 详情条 ---------- */
-  .detail {
-    flex: none; margin: 0 20px 0; padding: 12px 16px; border-radius: var(--radius);
-    background: var(--panel-2); border: 1px solid var(--line);
-    display: flex; align-items: center; gap: 18px; min-height: 62px;
-  }
-  .detail .d-title { font-size: 13.5px; font-weight: 600; min-width: 150px; }
-  .detail .d-sub { font-size: 11px; color: var(--muted-2); margin-top: 3px; }
-  .detail .d-fields { display: flex; gap: 22px; font-size: 11.5px; color: var(--muted); }
-  .detail .d-fields b { display: block; color: var(--text); font-size: 12.5px; font-weight: 600; margin-top: 3px; }
-  .detail .btn-primary { margin-left: auto; }
-  .detail.empty { color: var(--muted-2); font-size: 12.5px; justify-content: center; }
+  .empty { padding:60px 0; text-align:center; color:var(--muted2); font-size:13px; }
 
-  /* ---------- 状态栏 ---------- */
-  .statusbar {
-    grid-column: 1 / -1; display: flex; align-items: center; gap: 18px;
-    padding: 0 16px; background: var(--panel); border-top: 1px solid var(--line-soft);
-    font-size: 11px; color: var(--muted-2);
-  }
-  .statusbar .live { display: flex; align-items: center; gap: 6px; color: var(--ok); }
-  .statusbar .right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-  .zoom { width: 90px; height: 3px; background: var(--line); border-radius: 2px; position: relative; }
-  .zoom i { position: absolute; left: 55%; top: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); }
+  /* 详情条 */
+  .detail { flex:none; margin:0 20px 0; padding:12px 16px; border-radius:8px;
+            background:var(--panel2); border:1px solid var(--line);
+            display:flex; align-items:center; gap:18px; min-height:62px; }
+  .detail .d-title { font-size:13.5px; font-weight:600; min-width:140px; }
+  .detail .d-sub { font-size:11px; color:var(--muted2); margin-top:3px; }
+  .detail .d-fields { display:flex; gap:20px; font-size:11.5px; color:var(--muted); min-width:0; }
+  .detail .d-fields b { display:block; color:var(--text); font-size:12.5px;
+                        font-weight:600; margin-top:3px; white-space:nowrap;
+                        overflow:hidden; text-overflow:ellipsis; max-width:180px; }
+  .detail .btn-primary { margin-left:auto; flex:none; }
+  .detail.empty-detail { justify-content:center; color:var(--muted2); font-size:12.5px; }
 
-  .note {
-    position: fixed; right: 18px; bottom: 12px; font-size: 11px; color: #6a7284;
-    background: rgba(0,0,0,.5); padding: 6px 10px; border-radius: 5px;
+  /* 状态栏 */
+  .statusbar { grid-column:1/-1; display:flex; align-items:center; gap:18px; padding:0 16px;
+               background:var(--panel); border-top:1px solid var(--line-soft);
+               font-size:11px; color:var(--muted2); }
+  .statusbar .live { display:flex; align-items:center; gap:6px; }
+  .statusbar .right { margin-left:auto; display:flex; align-items:center; gap:14px; }
+
+  /* 模态框 */
+  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.62); display:none;
+             align-items:center; justify-content:center; z-index:50; }
+  .overlay.show { display:flex; }
+  .modal { background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+           box-shadow:0 24px 70px rgba(0,0,0,.6); width:520px; max-width:92vw;
+           max-height:86vh; display:flex; flex-direction:column; }
+  .modal.wide { width:720px; }
+  .modal-head { display:flex; align-items:center; padding:16px 20px;
+                border-bottom:1px solid var(--line-soft); }
+  .modal-head h2 { font-size:15px; font-weight:600; }
+  .modal-head .x { margin-left:auto; background:none; color:var(--muted); font-size:18px;
+                   width:28px; height:28px; border-radius:5px; }
+  .modal-head .x:hover { background:var(--panel3); color:var(--text); }
+  .modal-body { padding:18px 20px; overflow-y:auto; }
+  .modal-foot { display:flex; align-items:center; gap:8px; padding:14px 20px;
+                border-top:1px solid var(--line-soft); }
+  .modal-foot .spacer { margin-left:auto; }
+  .field { margin-bottom:12px; }
+  .field label { display:block; font-size:11.5px; color:var(--muted); margin-bottom:5px; }
+  .field input, .field textarea {
+    width:100%; background:var(--panel); border:1px solid var(--line); border-radius:5px;
+    padding:8px 10px; color:var(--text); font-size:13px; font-family:inherit; outline:none;
   }
+  .field input:focus, .field textarea:focus { border-color:var(--accent); }
+  .field textarea { resize:vertical; min-height:56px; }
+  .form-error { font-size:12px; color:#e2685f; min-height:18px; margin-top:4px; }
+  .btn { height:32px; padding:0 14px; border-radius:5px; background:var(--panel3);
+         color:var(--text); font-size:12.5px; }
+  .btn:hover { background:var(--line); }
+  .btn.danger { background:#5b2b2b; color:#ffb3b3; }
+  .btn.danger:hover { background:#6e3333; }
+
+  /* 扫描对话框 */
+  .scan-row { display:flex; gap:8px; margin-bottom:10px; }
+  .scan-row input { flex:1; background:var(--panel); border:1px solid var(--line);
+                    border-radius:5px; padding:8px 10px; color:var(--text);
+                    font-size:12.5px; font-family:inherit; outline:none; }
+  .scan-row input:focus { border-color:var(--accent); }
+  .root-list, .cand-list { border:1px solid var(--line); border-radius:6px;
+                           background:var(--panel); max-height:130px; overflow-y:auto;
+                           margin-bottom:12px; }
+  .root-item { display:flex; align-items:center; gap:8px; padding:7px 10px;
+               font-size:12px; border-bottom:1px solid var(--line-soft); }
+  .root-item:last-child, .cand-item:last-child { border-bottom:0; }
+  .root-item .path { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .root-item button { background:none; color:var(--muted2); font-size:14px; }
+  .root-item button:hover { color:#e2685f; }
+  .cand-list { max-height:260px; }
+  .group-head { display:flex; align-items:center; gap:8px; padding:8px 12px;
+                background:var(--panel3); font-size:12px; font-weight:600;
+                position:sticky; top:0; z-index:1; }
+  .group-head .cnt { margin-left:auto; font-weight:400; font-size:11px; color:var(--muted2); }
+  .cand-item { display:flex; align-items:center; gap:10px; padding:8px 12px;
+               font-size:12.5px; border-bottom:1px solid var(--line-soft); }
+  .cand-item.tool { opacity:.62; }
+  .cand-item.hidden-tool { display:none; }
+  .tag-rec { font-size:9.5px; color:var(--ok); border:1px solid rgba(67,192,136,.45);
+             border-radius:3px; padding:1px 5px; flex:none; }
+  .tag-tool { font-size:9.5px; color:var(--muted2); border:1px solid var(--line);
+              border-radius:3px; padding:1px 5px; flex:none; }
+  .cand-item input { width:15px; height:15px; accent-color:var(--accent); flex:none; }
+  .cand-item .info { min-width:0; }
+  .cand-item .info b { display:block; font-weight:600; }
+  .cand-item .info span { font-size:11px; color:var(--muted2);
+                          white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+  .hint { font-size:11.5px; color:var(--muted2); margin-bottom:10px; min-height:16px; }
 </style>
 </head>
 <body>
-
 <div class="window">
-  <!-- 顶栏 -->
   <header class="topbar">
-    <div class="brand">
-      <div class="logo">G</div>
-      <div><b>本地游戏库</b><span>LOCAL GAME MANAGER</span></div>
-    </div>
-
+    <div class="logo">G</div>
+    <div class="brand"><b>本地游戏库</b><span>LOCAL GAME MANAGER</span></div>
     <label class="search">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-      <input id="q" type="text" placeholder="搜索游戏名称、标签、路径…">
-      <kbd>Ctrl K</kbd>
+      <input id="q" type="text" placeholder="搜索名称、标签、路径…">
     </label>
-
+    <input id="tagInput" class="tag-input" type="text" placeholder="标签筛选…">
     <div class="top-actions">
       <div class="seg" title="视图切换">
-        <button id="btn-grid" class="on" title="网格视图">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        </button>
-        <button id="btn-list" title="列表视图">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4" width="18" height="3" rx="1"/><rect x="3" y="10.5" width="18" height="3" rx="1"/><rect x="3" y="17" width="18" height="3" rx="1"/></svg>
-        </button>
+        <button id="btnGrid" class="on" title="网格视图">▦</button>
+        <button id="btnList" title="列表视图">☰</button>
       </div>
-      <button class="icon-btn" title="筛选">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
-      </button>
-      <button class="icon-btn" title="设置">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
-      </button>
-      <button class="btn-primary">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
-        添加游戏
-      </button>
+      <button class="icon-btn" id="btnRefresh" title="刷新">↻</button>
+      <button class="btn" id="btnScan" title="扫描本地目录">⌕ 扫描目录…</button>
+      <button class="btn-primary" id="btnAdd">＋ 添加游戏</button>
     </div>
   </header>
 
-  <!-- 侧栏 -->
   <aside class="sidebar">
-    <div>
-      <div class="side-title">游戏库</div>
-      <div class="nav-item on"><span class="ic">▦</span>所有游戏<span class="count">8</span></div>
-      <div class="nav-item"><span class="ic">◷</span>最近游玩<span class="count">3</span></div>
-      <div class="nav-item"><span class="ic">★</span>收藏<span class="count">2</span></div>
-      <div class="nav-item"><span class="ic">↗</span>最多游玩<span class="count">—</span></div>
-    </div>
+    <div class="side-title">游戏库</div>
+    <button class="nav on" id="navAll">▦　所有游戏<span class="count" id="navCount">0</span></button>
+    <button class="nav" id="navRecent">◷　最近游玩</button>
 
-    <div>
-      <div class="side-title">按标签筛选</div>
-      <div class="nav-item"><span class="dot" style="background:#e2685f"></span>动作<span class="count">3</span></div>
-      <div class="nav-item"><span class="dot" style="background:#5aa9e6"></span>角色扮演<span class="count">2</span></div>
-      <div class="nav-item"><span class="dot" style="background:#6fc48a"></span>独立<span class="count">4</span></div>
-      <div class="nav-item"><span class="dot" style="background:#c08ce0"></span>解谜<span class="count">1</span></div>
-    </div>
-
-    <div>
-      <div class="side-title">状态</div>
-      <div class="nav-item"><span class="dot" style="background:var(--ok)"></span>运行中<span class="count">1</span></div>
-      <div class="nav-item"><span class="dot" style="background:#5b6474"></span>已退出<span class="count">7</span></div>
-    </div>
+    <div class="side-title">按标签筛选</div>
+    <div id="tagList"></div>
 
     <div class="stat-box">
-      <div class="row"><span>游戏总数</span><b>8</b></div>
-      <div class="row"><span>已启动过</span><b>5</b></div>
-      <div class="row"><span>累计启动</span><b>27 次</b></div>
+      <div class="row"><span>游戏总数</span><b id="statTotal">0</b></div>
+      <div class="row"><span>已启动过</span><b id="statPlayed">0</b></div>
+      <div class="row"><span>累计启动</span><b id="statLaunches">0 次</b></div>
       <hr>
       <div class="row"><span>数据文件</span><b>games.db</b></div>
     </div>
   </aside>
 
-  <!-- 主内容 -->
-  <section class="main">
+  <section class="main" id="main">
     <div class="content-head">
-      <div><h1>所有游戏</h1><div class="sub">共 8 款 · 按名称排序</div></div>
-      <div class="chips">
-        <span class="chip on">全部</span>
-        <span class="chip">动作</span>
-        <span class="chip">角色扮演</span>
-        <span class="chip">独立</span>
-        <span class="chip">解谜</span>
-      </div>
+      <div><h1 id="viewTitle">所有游戏</h1><div class="sub" id="viewSub">加载中…</div></div>
     </div>
-
     <div class="scroll">
-      <div class="list-head"><span></span><span>名称</span><span>标签</span><span>路径</span><span>次数</span><span>状态</span></div>
+      <div class="list-head"><span></span><span>名称</span><span>标签</span><span>路径</span><span>次数</span><span>状态 / 最后游玩</span></div>
       <div class="grid" id="grid"></div>
+      <div class="empty" id="empty" style="display:none">没有匹配的游戏，换个关键字或标签试试。</div>
     </div>
-
-    <div class="detail empty" id="detail">点击任意卡片查看信息与启动按钮</div>
+    <div class="detail empty-detail" id="detail">单击任意游戏查看信息</div>
   </section>
 
-  <!-- 状态栏 -->
   <footer class="statusbar">
-    <span class="live"><span class="dot" style="background:var(--ok)"></span>1 个游戏运行中</span>
-    <span>共 8 款游戏</span>
-    <span>断网可用 · 数据存于本地 games.db</span>
-    <div class="right">
-      <span>封面尺寸</span><div class="zoom"><i></i></div>
-      <span>v0.1 MVP</span>
-    </div>
+    <span class="live" id="bridgeState">● 等待桥接…</span>
+    <span id="statusCount">共 0 款游戏</span>
+    <span id="runState">无运行中的游戏</span>
+    <span id="lastEvent">数据存于本地 games.db</span>
+    <span class="right"><span id="runtimeInfo">—</span><span>C2 · pywebview · W4</span></span>
   </footer>
 </div>
 
-<div class="note">样式稿 · 封面为渐变占位（MVP 不抓取真实封面）· 网格 / 列表可切换</div>
+<!-- 添加 / 编辑表单 -->
+<div class="overlay" id="formOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2 id="formTitle">添加游戏</h2>
+      <button class="x" id="formClose">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label>名称 *</label><input id="fName" placeholder="游戏名称"></div>
+      <div class="field"><label>游戏目录 *</label><input id="fPath" placeholder="D:\Games\Demo"></div>
+      <div class="field"><label>可执行文件 *</label><input id="fExe" placeholder="demo.exe"></div>
+      <div class="field"><label>启动参数</label><input id="fArgs" placeholder="-windowed"></div>
+      <div class="field"><label>标签（逗号分隔）</label><input id="fTags" placeholder="动作, 独立"></div>
+      <div class="field"><label>备注</label><textarea id="fNote"></textarea></div>
+      <div class="form-error" id="formError"></div>
+    </div>
+    <div class="modal-foot">
+      <span style="font-size:11px;color:var(--muted2)">* 为必填项</span>
+      <span class="spacer"></span>
+      <button class="btn" id="formCancel">取消</button>
+      <button class="btn-primary" id="formSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 扫描导入 -->
+<div class="overlay" id="scanOverlay">
+  <div class="modal wide">
+    <div class="modal-head"><h2>扫描游戏目录</h2>
+      <button class="x" id="scanClose">×</button></div>
+    <div class="modal-body">
+      <div class="hint">添加一个或多个根目录，扫描后勾选要导入的游戏。扫描只读目录，绝不执行任何文件。</div>
+      <div class="scan-row">
+        <input id="scanRootInput" placeholder="粘贴目录路径，或点右侧按钮选择…">
+        <button class="btn" id="scanPick">浏览…</button>
+        <button class="btn" id="scanAddRoot">添加</button>
+      </div>
+      <div class="root-list" id="rootList"></div>
+      <div class="scan-row">
+        <button class="btn-primary" id="scanRun">扫描</button>
+        <button class="btn" id="scanRecommend">仅推荐</button>
+        <button class="btn" id="scanSelectAll">全选</button>
+        <button class="btn" id="scanSelectNone">全不选</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap">
+          <input type="checkbox" id="scanShowTools" style="accent-color:var(--accent)">显示工具项
+        </label>
+      </div>
+      <div class="hint" id="scanHint">尚未扫描。</div>
+      <div class="cand-list" id="candList"></div>
+    </div>
+    <div class="modal-foot">
+      <span style="font-size:11px;color:var(--muted2)" id="scanFootInfo">只有勾选的才会入库</span>
+      <span class="spacer"></span>
+      <button class="btn" id="scanCancel">关闭</button>
+      <button class="btn-primary" id="scanImport">导入选中</button>
+    </div>
+  </div>
+</div>
+
+<!-- 删除确认 -->
+<div class="overlay" id="confirmOverlay">
+  <div class="modal" style="width:400px">
+    <div class="modal-head"><h2>确认删除</h2>
+      <button class="x" id="confirmClose">×</button></div>
+    <div class="modal-body" style="font-size:13px" id="confirmText"></div>
+    <div class="modal-foot">
+      <span class="spacer"></span>
+      <button class="btn" id="confirmCancel">取消</button>
+      <button class="btn danger" id="confirmYes">删除</button>
+    </div>
+  </div>
+</div>
 
 <script>
-const GAMES = [
-  { name: "ELDEN RING",      sub: "艾尔登法环",   tags: "动作, 角色扮演", path: "D:\\Games\\ELDEN RING", plays: 12, state: "运行中", star: true,  a: "#3b2f6b", b: "#c08a4a", ini: "ER" },
-  { name: "Stardew Valley",  sub: "星露谷物语",   tags: "独立, 模拟",     path: "D:\\Games\\Stardew",   plays: 8,  state: "已退出", star: false, a: "#2f6b4a", b: "#8fc46a", ini: "SV" },
-  { name: "Hollow Knight",   sub: "空洞骑士",     tags: "动作, 独立",     path: "D:\\Games\\Hollow",    plays: 4,  state: "已退出", star: true,  a: "#1f3a5c", b: "#4a86b8", ini: "HK" },
-  { name: "Cyberpunk 2077",  sub: "赛博朋克2077", tags: "动作, 角色扮演", path: "E:\\Games\\CP2077",    plays: 3,  state: "已退出", star: false, a: "#7a5b17", b: "#d94f6a", ini: "CP" },
-  { name: "Hades",           sub: "哈迪斯",       tags: "动作, 独立",     path: "D:\\Games\\Hades",     plays: 0,  state: "已退出", star: false, a: "#6b2323", b: "#d9743a", ini: "HD" },
-  { name: "Terraria",        sub: "泰拉瑞亚",     tags: "独立, 冒险",     path: "D:\\Games\\Terraria",  plays: 0,  state: "已退出", star: false, a: "#2d6b63", b: "#7fc4a8", ini: "TR" },
-  { name: "Baldur's Gate 3", sub: "博德之门3",    tags: "角色扮演",       path: "E:\\Games\\BG3",       plays: 0,  state: "已退出", star: false, a: "#4a2f5c", b: "#a86ab8", ini: "B3" },
-  { name: "Portal 2",        sub: "传送门2",      tags: "解谜",           path: "D:\\Games\\Portal2",   plays: 0,  state: "已退出", star: false, a: "#2b4a6b", b: "#e0a24a", ini: "P2" },
-];
+/* 样式稿专用：本地假数据，替代 window.pywebview.api，便于双击浏览器预览 */
+(function () {
+  let nextId = 100;
+  const rows = [
+    {id:1, name:"ELDEN RING",      path:"D:/Games/ELDEN RING", exe:"eldenring.exe", args:"", tags:"动作,角色扮演", note:"", play_count:12, last_played:"2026-11-12T14:02:11+00:00"},
+    {id:2, name:"Stardew Valley",  path:"D:/Games/Stardew",   exe:"stardew.exe",   args:"", tags:"独立,模拟",     note:"", play_count:8,  last_played:"2026-11-10T09:31:00+00:00"},
+    {id:3, name:"Hollow Knight",   path:"D:/Games/Hollow",    exe:"hollow.exe",    args:"", tags:"动作,独立",     note:"", play_count:4,  last_played:"2026-11-08T20:15:42+00:00"},
+    {id:4, name:"Cyberpunk 2077",  path:"E:/Games/CP2077",    exe:"cp2077.exe",    args:"", tags:"动作,角色扮演", note:"", play_count:3,  last_played:"2026-11-05T18:44:09+00:00"},
+    {id:5, name:"Hades",           path:"D:/Games/Hades",     exe:"hades.exe",     args:"", tags:"动作,独立",     note:"", play_count:0,  last_played:null},
+    {id:6, name:"Terraria",        path:"D:/Games/Terraria",  exe:"terraria.exe",  args:"", tags:"独立,冒险",     note:"", play_count:0,  last_played:null},
+    {id:7, name:"Baldur's Gate 3", path:"E:/Games/BG3",       exe:"bg3.exe",       args:"", tags:"角色扮演",     note:"", play_count:0,  last_played:null},
+    {id:8, name:"Portal 2",        path:"D:/Games/Portal2",   exe:"portal2.exe",   args:"", tags:"解谜",         note:"", play_count:0,  last_played:null}
+  ];
+  const running = new Map();
+  const ok = v => Promise.resolve(v);
+  const stats = () => ({total: rows.length,
+    played: rows.filter(r => r.play_count > 0).length,
+    launches: rows.reduce((n, r) => n + r.play_count, 0)});
 
-const grid = document.getElementById("grid");
-const detail = document.getElementById("detail");
+  const api = {
+    get_version: () => ok("Python 3.12.14 · 样式稿预览"),
+    ping: () => ok("pong"),
+    list_games: (opts) => {
+      opts = opts || {};
+      const kw = (opts.keyword || "").toLowerCase();
+      const tag = (opts.tag || "").trim();
+      let out = rows.filter(r =>
+        (!kw || (r.name + r.tags + r.path + r.note).toLowerCase().includes(kw)) &&
+        (!tag || r.tags.split(",").map(t => t.trim()).includes(tag)));
+      if (opts.view === "recent")
+        out = out.slice().sort((a,b) => (b.last_played||"").localeCompare(a.last_played||""));
+      else out = out.slice().sort((a,b) => a.name.localeCompare(b.name));
+      return ok(out.map(r => Object.assign({}, r)));
+    },
+    get_game: id => ok(rows.find(r => r.id === id) || null),
+    get_tags: () => {
+      const c = {};
+      rows.forEach(r => r.tags.split(",").forEach(t => {
+        t = t.trim(); if (t) c[t] = (c[t]||0)+1; }));
+      return ok(Object.keys(c).sort().map(name => ({name:name, count:c[name]})));
+    },
+    get_stats: () => ok(stats()),
+    add_game: f => { const r = Object.assign({id:++nextId, play_count:0,
+        last_played:null, args:"", tags:"", note:""}, f); rows.push(r);
+        return ok({ok:true, id:r.id}); },
+    update_game: (id,f) => { const r = rows.find(x => x.id === id);
+        if (!r) return ok({ok:false, error:"记录不存在"});
+        Object.assign(r,f); return ok({ok:true}); },
+    delete_game: id => { const i = rows.findIndex(x => x.id === id);
+        if (i < 0) return ok({ok:false}); rows.splice(i,1); return ok({ok:true}); },
+    pick_directories: () => ok(["D:/steam/steamapps/common"]),
+    scan_preview: () => ok({ok:true, found:6, candidates:[], errors:[], groups:[
+      {name:"Age of Wonders 4", path:"D:/steam/steamapps/common/Age of Wonders 4",
+       recommended:"AOW4.exe", items:[
+        {name:"Age of Wonders 4", path:"D:/steam/steamapps/common/Age of Wonders 4", exe:"AOW4.exe", tool:false, score:133.9},
+        {name:"Age of Wonders 4", path:"D:/steam/steamapps/common/Age of Wonders 4", exe:"ResourceED.exe", tool:true, score:81.7},
+        {name:"Age of Wonders 4", path:"D:/steam/steamapps/common/Age of Wonders 4", exe:"LevelEd.exe", tool:true, score:40.2}]},
+      {name:"Half-Life", path:"D:/steam/steamapps/common/Half-Life",
+       recommended:"hl.exe", items:[
+        {name:"Half-Life", path:"D:/steam/steamapps/common/Half-Life", exe:"hl.exe", tool:false, score:124.0},
+        {name:"Half-Life", path:"D:/steam/steamapps/common/Half-Life", exe:"hlds.exe", tool:false, score:50.2}]},
+      {name:"Street Fighter 6", path:"D:/steam/steamapps/common/Street Fighter 6",
+       recommended:"StreetFighter6.exe", items:[
+        {name:"Street Fighter 6", path:"D:/steam/steamapps/common/Street Fighter 6", exe:"StreetFighter6.exe", tool:false, score:194.0}]}
+    ]}),
+    import_games: items => { let n=0; (items||[]).forEach(it => {
+        if (rows.some(r => r.path === it.path && r.exe === it.exe)) return;
+        rows.push({id:++nextId, name:it.name, path:it.path, exe:it.exe,
+          args:"", tags:"", note:"", play_count:0, last_played:null}); n++; });
+        return ok({ok:true, imported:n, skipped:0}); },
+    launch_game: id => { const r = rows.find(x => x.id === id);
+        if (!r) return ok({ok:false, error:"游戏记录不存在"});
+        r.play_count += 1;
+        r.last_played = new Date().toISOString().replace(/\.\d+Z$/, "+00:00");
+        running.set(id, setTimeout(() => running.delete(id), 4000));
+        return ok({ok:true, running:true}); },
+    poll_status: () => ok({running:Array.from(running.keys()), finished:[], stats:stats()})
+  };
 
-function render(list) {
-  grid.innerHTML = list.map((g, i) => `
-    <div class="card" data-i="${GAMES.indexOf(g)}">
-      <div class="cover" style="background:linear-gradient(150deg, ${g.a}, ${g.b})">
-        <div class="grain"></div><div class="shine"></div>
-        <div class="initials">${g.ini}</div>
-        <div class="placeholder">COVER PLACEHOLDER</div>
-        ${g.state === "运行中" ? '<div class="badge playing"><span class="dot" style="background:var(--ok)"></span>运行中</div>' : ''}
-        ${g.star ? '<div class="badge star">★</div>' : ''}
-      </div>
-      <div class="name">${g.name}</div>
-      <div class="meta m-sub">${g.sub} · ${g.tags}</div>
-      <div class="meta m-path">${g.path}</div>
-      <div class="meta m-plays">${g.plays} 次</div>
-      <div class="meta m-state">${g.state}</div>
-    </div>`).join("");
-
-  grid.querySelectorAll(".card").forEach(card => {
-    card.addEventListener("click", () => select(card));
+  window.pywebview = {api: api};
+  window.addEventListener("DOMContentLoaded", function () {
+    window.dispatchEvent(new Event("pywebviewready"));
   });
-}
+})();
+</script>
 
-function select(card) {
-  grid.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
-  card.classList.add("selected");
-  const g = GAMES[+card.dataset.i];
-  detail.className = "detail";
-  detail.innerHTML = `
-    <div><div class="d-title">${g.name}</div><div class="d-sub">${g.sub}</div></div>
-    <div class="d-fields">
-      <div>标签<b>${g.tags}</b></div>
-      <div>游玩次数<b>${g.plays} 次</b></div>
-      <div>状态<b style="color:${g.state === "运行中" ? "var(--ok)" : "var(--muted)"}">${g.state}</b></div>
-      <div>路径<b style="font-size:11px;color:var(--muted)">${g.path}</b></div>
-    </div>
-    <button class="btn-primary">▶ 启动游戏</button>`;
-}
+<script>
+  // 封面占位色：与 Python theme.COVER_COLORS 同一组，按名称稳定取值
+  const COVER_COLORS = ["#3b2f6b","#2f6b4a","#1f3a5c","#7a5b17",
+                        "#6b2323","#2d6b63","#4a2f5c","#2b4a6b"];
+  function coverColor(name) {
+    let sum = 0;
+    for (const ch of unescape(encodeURIComponent(name))) sum += ch.charCodeAt(0);
+    return COVER_COLORS[sum % COVER_COLORS.length];
+  }
+  function initials(name) {
+    return name.trim().slice(0, 2).toUpperCase();
+  }
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => (
+      {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
 
-// 网格 / 列表切换
-const main = document.querySelector(".main");
-document.getElementById("btn-grid").onclick = () => {
-  main.classList.remove("list-view");
-  document.getElementById("btn-grid").classList.add("on");
-  document.getElementById("btn-list").classList.remove("on");
-};
-document.getElementById("btn-list").onclick = () => {
-  main.classList.add("list-view");
-  document.getElementById("btn-list").classList.add("on");
-  document.getElementById("btn-grid").classList.remove("on");
-};
+  const state = { keyword:"", tag:"", view:"all", mode:"grid",
+                  rows:[], selected:null, running:[] };
+  const $ = id => document.getElementById(id);
+  const api = () => window.pywebview.api;
 
-// 搜索过滤
-document.getElementById("q").addEventListener("input", e => {
-  const k = e.target.value.trim().toLowerCase();
-  render(GAMES.filter(g => !k || (g.name + g.sub + g.tags + g.path).toLowerCase().includes(k)));
-});
+  function cardHtml(row) {
+    const color = coverColor(row.name);
+    const short = esc(row.last_played || "—");
+    const running = state.running.includes(row.id);
+    return `<div class="card${running ? " running" : ""}" data-id="${row.id}">
+      <div class="cover" style="background:${color}">
+        <div class="grain"></div><div class="shine"></div>
+        <div class="initials">${esc(initials(row.name))}</div>
+        <div class="ph">COVER PLACEHOLDER</div>
+        ${running ? '<div class="badge-playing"><span class="dot"></span>运行中</div>' : ""}
+      </div>
+      <div class="name">${esc(row.name)}</div>
+      <div class="meta m-sub">${esc(row.tags || "无标签")} · ${row.play_count} 次</div>
+      <div class="meta m-path">${esc(row.path)}</div>
+      <div class="meta m-plays">${row.play_count} 次</div>
+      <div class="meta m-state${running ? " state-running" : ""}">${running ? "运行中" : short}</div>
+    </div>`;
+  }
 
-// 标签 chips
-document.querySelectorAll(".chip").forEach(chip => chip.onclick = () => {
-  document.querySelectorAll(".chip").forEach(c => c.classList.remove("on"));
-  chip.classList.add("on");
-  const k = chip.textContent.trim();
-  render(k === "全部" ? GAMES : GAMES.filter(g => g.tags.includes(k)));
-});
+  function renderGames() {
+    const grid = $("grid");
+    grid.innerHTML = state.rows.map(cardHtml).join("");
+    $("empty").style.display = state.rows.length ? "none" : "block";
+    $("statusCount").textContent = `共 ${state.rows.length} 款游戏`;
+    $("viewSub").textContent = `显示 ${state.rows.length} 款 · ${state.mode === "grid" ? "网格" : "列表"}视图`;
+    grid.querySelectorAll(".card").forEach(el => {
+      el.addEventListener("click", () => select(+el.dataset.id, el));
+    });
+    if (state.selected != null) {
+      const hit = grid.querySelector(`.card[data-id="${state.selected}"]`);
+      if (hit) hit.classList.add("selected");
+    }
+  }
 
-render(GAMES);
+  async function refreshGames() {
+    state.rows = await api().list_games({
+      keyword: state.keyword, tag: state.tag, view: state.view
+    });
+    renderGames();
+  }
+
+  async function refreshSide() {
+    const [tags, stats] = await Promise.all([api().get_tags(), api().get_stats()]);
+    const box = $("tagList");
+    if (!tags.length) {
+      box.innerHTML = `<div style="font-size:11.5px;color:var(--muted2);padding:0 10px">（暂无标签）</div>`;
+    } else {
+      box.innerHTML = tags.map(t => {
+        const on = state.tag === t.name;
+        return `<button class="nav ${on ? "on" : ""}" data-tag="${esc(t.name)}">
+          <span class="dot" style="background:${coverColor(t.name)}"></span>
+          <span>${esc(t.name)}</span><span class="count">${t.count}</span></button>`;
+      }).join("");
+      box.querySelectorAll("[data-tag]").forEach(el => {
+        el.addEventListener("click", () => {
+          const t = el.dataset.tag;
+          state.tag = (state.tag === t) ? "" : t;
+          $("tagInput").value = state.tag;
+          refreshGames(); refreshSide();
+        });
+      });
+    }
+    $("statTotal").textContent = stats.total;
+    $("statPlayed").textContent = stats.played;
+    $("statLaunches").textContent = `${stats.launches} 次`;
+    $("navCount").textContent = stats.total;
+  }
+
+  async function select(id, el) {
+    state.selected = id;
+    document.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
+    if (el) el.classList.add("selected");
+    const row = await api().get_game(id);
+    if (!row) return;
+    const detail = $("detail");
+    detail.className = "detail";
+    detail.innerHTML = `
+      <div><div class="d-title">${esc(row.name)}</div>
+           <div class="d-sub">${esc(row.tags || "无标签")}</div></div>
+      <div class="d-fields">
+        <div>游玩次数<b>${row.play_count} 次</b></div>
+        <div>最后游玩<b>${esc(row.last_played || "—")}</b></div>
+        <div>路径<b>${esc(row.path)}</b></div>
+        <div>可执行<b>${esc(row.exe)}</b></div>
+      </div>
+      <button class="btn" id="detailEdit" data-id="${row.id}">编辑</button>
+      <button class="btn danger" id="detailDelete" data-id="${row.id}" data-name="${esc(row.name)}">删除</button>
+      <button class="btn-primary" id="detailLaunch" data-id="${row.id}">▶ 启动游戏</button>`;
+    $("detailEdit").addEventListener("click", () => openEdit(row.id));
+    $("detailDelete").addEventListener("click", () => askDelete(row.id, row.name));
+    $("detailLaunch").addEventListener("click", () => launchSelected(row.id));
+  }
+
+  async function launchSelected(id) {
+    const res = await api().launch_game(id);
+    if (!res.ok) {
+      $("lastEvent").textContent = `启动失败：${res.error}`;
+      $("lastEvent").style.color = "#e2685f";
+      return;
+    }
+    $("lastEvent").style.color = "";
+    const row = await api().get_game(id);
+    $("lastEvent").textContent = `「${row ? row.name : "游戏"}」已启动…`;
+    await pollStatus();
+  }
+
+  let lastRunningKey = "";
+  async function pollStatus() {
+    const st = await api().poll_status();
+    // 只在「运行中集合变化」或「刚有进程退出」时重建列表；
+    // 否则运行中期间每 700ms 换一次 DOM，按钮会一直被替换掉没法点。
+    const key = st.running.slice().sort((a, b) => a - b).join(",");
+    const changed = key !== lastRunningKey;
+    lastRunningKey = key;
+    state.running = st.running;
+    $("runState").textContent = st.running.length
+      ? `● ${st.running.length} 个游戏运行中` : "无运行中的游戏";
+    $("runState").style.color = st.running.length ? "var(--ok)" : "";
+    $("statTotal").textContent = st.stats.total;
+    $("statPlayed").textContent = st.stats.played;
+    $("statLaunches").textContent = `${st.stats.launches} 次`;
+    $("navCount").textContent = st.stats.total;
+    for (const ev of st.finished) {
+      const text = ev.returncode === 0
+        ? `「${ev.name}」正常退出`
+        : `「${ev.name}」异常退出（返回码 ${ev.returncode}）`;
+      $("lastEvent").textContent = text;
+      $("lastEvent").style.color = "";
+    }
+    if (changed || st.finished.length) {
+      await refreshGames();          // 刷新角标 / 状态列 / 次数
+      if (state.selected != null) await select(state.selected, null);
+    }
+  }
+
+  function setView(view) {
+    state.view = view;
+    $("navAll").classList.toggle("on", view === "all");
+    $("navRecent").classList.toggle("on", view === "recent");
+    $("viewTitle").textContent = view === "all" ? "所有游戏" : "最近游玩";
+    refreshGames();
+  }
+  function setMode(mode) {
+    state.mode = mode;
+    $("main").classList.toggle("list-view", mode === "list");
+    $("btnGrid").classList.toggle("on", mode === "grid");
+    $("btnList").classList.toggle("on", mode === "list");
+    renderGames();
+  }
+
+  $("q").addEventListener("input", e => { state.keyword = e.target.value; refreshGames(); });
+  $("tagInput").addEventListener("input", e => { state.tag = e.target.value; refreshGames(); refreshSide(); });
+  $("btnGrid").addEventListener("click", () => setMode("grid"));
+  $("btnList").addEventListener("click", () => setMode("list"));
+  $("btnRefresh").addEventListener("click", () => { refreshGames(); refreshSide(); });
+  $("navAll").addEventListener("click", () => setView("all"));
+  $("navRecent").addEventListener("click", () => setView("recent"));
+
+  // ---------- W3：表单 / 扫描 / 删除 ----------
+  const formState = { editingId: null };
+  const scanState = { roots: [], groups: [], flat: [], showTools: false };
+  const confirmState = { id: null };
+
+  function showOverlay(id, on) {
+    $(id).classList.toggle("show", on);
+  }
+  function closeAll() {
+    showOverlay("formOverlay", false);
+    showOverlay("scanOverlay", false);
+    showOverlay("confirmOverlay", false);
+  }
+  async function refreshAll() {
+    await Promise.all([refreshGames(), refreshSide()]);
+  }
+
+  function fillForm(row) {
+    $("fName").value = row ? row.name : "";
+    $("fPath").value = row ? row.path : "";
+    $("fExe").value = row ? row.exe : "";
+    $("fArgs").value = row ? row.args : "";
+    $("fTags").value = row ? row.tags : "";
+    $("fNote").value = row ? row.note : "";
+    $("formError").textContent = "";
+  }
+  function readForm() {
+    return { name: $("fName").value, path: $("fPath").value,
+             exe: $("fExe").value, args: $("fArgs").value,
+             tags: $("fTags").value, note: $("fNote").value };
+  }
+  function openAdd() {
+    formState.editingId = null;
+    $("formTitle").textContent = "添加游戏";
+    fillForm(null);
+    closeAll(); showOverlay("formOverlay", true);
+  }
+  async function openEdit(id) {
+    const row = await api().get_game(id);
+    if (!row) return;
+    formState.editingId = id;
+    $("formTitle").textContent = "编辑游戏";
+    fillForm(row);
+    closeAll(); showOverlay("formOverlay", true);
+  }
+  async function saveForm() {
+    const fields = readForm();
+    const res = formState.editingId == null
+      ? await api().add_game(fields)
+      : await api().update_game(formState.editingId, fields);
+    if (!res.ok) { $("formError").textContent = res.error || "保存失败"; return; }
+    closeAll();
+    await refreshAll();
+  }
+  function askDelete(id, name) {
+    confirmState.id = id;
+    $("confirmText").textContent = `确定删除「${name}」吗？此操作不可撤销。`;
+    closeAll(); showOverlay("confirmOverlay", true);
+  }
+  async function doDelete() {
+    const res = await api().delete_game(confirmState.id);
+    closeAll();
+    if (res.ok) {
+      state.selected = null;
+      $("detail").className = "detail empty-detail";
+      $("detail").textContent = "单击任意游戏查看信息";
+    }
+    await refreshAll();
+  }
+
+  function renderRoots() {
+    $("rootList").innerHTML = scanState.roots.length
+      ? scanState.roots.map((r, i) => `<div class="root-item">
+          <span class="path">${esc(r)}</span>
+          <button data-i="${i}" title="移除">×</button></div>`).join("")
+      : `<div class="root-item" style="color:var(--muted2)">（尚未添加目录）</div>`;
+    $("rootList").querySelectorAll("button[data-i]").forEach(b => {
+      b.addEventListener("click", () => {
+        scanState.roots.splice(+b.dataset.i, 1);
+        renderRoots();
+      });
+    });
+  }
+  function renderCandidates() {
+    const list = $("candList");
+    scanState.flat = [];
+    if (!scanState.groups.length) {
+      list.innerHTML = `<div class="cand-item" style="color:var(--muted2)">（没有可导入的新游戏）</div>`;
+      return;
+    }
+    let html = "";
+    for (const g of scanState.groups) {
+      const toolCount = g.items.filter(it => it.tool).length;
+      html += `<div class="group-head"><span>▦ ${esc(g.name)}</span>
+        <span class="cnt">${g.items.length} 个 exe${toolCount ? ` · ${toolCount} 个工具项` : ""}</span></div>`;
+      for (const it of g.items) {
+        const idx = scanState.flat.length;
+        scanState.flat.push({ name: it.name, path: it.path, exe: it.exe });
+        const recommended = it.exe === g.recommended;
+        const hidden = it.tool && !scanState.showTools ? " hidden-tool" : "";
+        html += `<label class="cand-item${it.tool ? " tool" : ""}${hidden}" data-tool="${it.tool}">
+          <input type="checkbox" data-i="${idx}" ${recommended ? "checked" : ""}>
+          <span class="info"><b>${esc(it.exe)}</b>
+            <span>${esc(it.path)}\\${esc(it.exe)} · 匹配分 ${it.score}</span></span>
+          ${recommended ? '<span class="tag-rec">推荐主程序</span>' : ""}
+          ${it.tool ? '<span class="tag-tool">工具项</span>' : ""}
+        </label>`;
+      }
+    }
+    list.innerHTML = html;
+  }
+  function setChecks(mode) {
+    $("candList").querySelectorAll(".cand-item").forEach(row => {
+      const box = row.querySelector("input");
+      if (!box) return;
+      if (mode === "all") box.checked = !row.classList.contains("hidden-tool");
+      else if (mode === "none") box.checked = false;
+      else if (mode === "recommended") {
+        box.checked = !!row.querySelector(".tag-rec");
+      }
+    });
+  }
+  async function addRootFromInput() {
+    const value = $("scanRootInput").value.trim();
+    if (value && !scanState.roots.includes(value)) scanState.roots.push(value);
+    $("scanRootInput").value = "";
+    renderRoots();
+  }
+  async function pickRoots() {
+    const picked = await api().pick_directories();
+    for (const p of (picked || [])) {
+      if (p && !scanState.roots.includes(p)) scanState.roots.push(p);
+    }
+    renderRoots();
+  }
+  async function runScan() {
+    if (!scanState.roots.length) {
+      $("scanHint").textContent = "请先添加至少一个目录。";
+      return;
+    }
+    $("scanHint").textContent = "扫描中…";
+    const res = await api().scan_preview(scanState.roots);
+    if (!res.ok) { $("scanHint").textContent = res.error; return; }
+    scanState.groups = res.groups || [];
+    renderCandidates();
+    const total = res.candidates.length;
+    const toolTotal = scanState.groups.reduce(
+      (n, g) => n + g.items.filter(it => it.tool).length, 0);
+    const err = (res.errors || []).length ? `，${res.errors.length} 个目录无效已跳过` : "";
+    $("scanHint").textContent =
+      `扫到 ${res.found} 个 exe，归为 ${scanState.groups.length} 个游戏目录；` +
+      `${total} 个可导入（其中 ${toolTotal} 个疑似工具项已默认隐藏）${err}。` +
+      `每组默认只勾推荐主程序，可自行改选。`;
+  }
+  async function doImport() {
+    const checked = [...$("candList").querySelectorAll("input:checked")]
+      .map(el => scanState.flat[+el.dataset.i])
+      .filter(Boolean);
+    if (!checked.length) { $("scanHint").textContent = "没有勾选任何候选项。"; return; }
+    const res = await api().import_games(checked);
+    $("scanFootInfo").textContent = `已导入 ${res.imported} 个，跳过 ${res.skipped} 个`;
+    await runScan();          // 重新扫描，已入库的会被过滤掉
+    await refreshAll();
+  }
+
+  $("btnAdd").addEventListener("click", openAdd);
+  $("formClose").addEventListener("click", closeAll);
+  $("formCancel").addEventListener("click", closeAll);
+  $("formSave").addEventListener("click", saveForm);
+  $("confirmClose").addEventListener("click", closeAll);
+  $("confirmCancel").addEventListener("click", closeAll);
+  $("confirmYes").addEventListener("click", doDelete);
+
+  $("btnScan").addEventListener("click", () => {
+    scanState.roots = []; scanState.groups = []; scanState.flat = [];
+    scanState.showTools = false;
+    $("scanShowTools").checked = false;
+    renderRoots(); renderCandidates();
+    $("scanHint").textContent = "尚未扫描。";
+    $("scanFootInfo").textContent = "只有勾选的才会入库";
+    closeAll(); showOverlay("scanOverlay", true);
+  });
+  $("scanClose").addEventListener("click", closeAll);
+  $("scanCancel").addEventListener("click", closeAll);
+  $("scanAddRoot").addEventListener("click", addRootFromInput);
+  $("scanRootInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") addRootFromInput();
+  });
+  $("scanPick").addEventListener("click", pickRoots);
+  $("scanRun").addEventListener("click", runScan);
+  $("scanRecommend").addEventListener("click", () => setChecks("recommended"));
+  $("scanSelectAll").addEventListener("click", () => setChecks("all"));
+  $("scanSelectNone").addEventListener("click", () => setChecks("none"));
+  $("scanShowTools").addEventListener("change", e => {
+    scanState.showTools = e.target.checked;
+    $("candList").querySelectorAll(".cand-item[data-tool='true']").forEach(row => {
+      row.classList.toggle("hidden-tool", !scanState.showTools);
+    });
+  });
+  $("scanImport").addEventListener("click", doImport);
+
+  window.addEventListener("pywebviewready", async function () {
+    try {
+      const [v, p] = await Promise.all([api().get_version(), api().ping()]);
+      $("bridgeState").textContent = "● 桥接已打通";
+      $("bridgeState").style.color = "var(--ok)";
+      $("runtimeInfo").textContent = `${v} · ping=${p}`;
+    } catch (e) {
+      $("bridgeState").textContent = "● 桥接失败";
+      $("bridgeState").style.color = "#e2685f";
+      $("runtimeInfo").textContent = String(e);
+    }
+    await Promise.all([refreshGames(), refreshSide()]);
+    // 主线程定时轮询（每 700ms），不另起后台线程操作窗口
+    setInterval(() => { pollStatus().catch(() => {}); }, 700);
+  });
 </script>
 </body>
 </html>
