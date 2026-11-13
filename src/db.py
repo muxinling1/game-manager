@@ -8,7 +8,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "games.db"
+from src import paths  # noqa: E402
+
+DEFAULT_DB_PATH = paths.data_dir() / "games.db"
 
 # update() 允许改动的列；列名只能从这里取，避免拼接 SQL 时被注入
 UPDATABLE_FIELDS = ("name", "path", "exe", "args", "tags", "note")

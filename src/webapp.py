@@ -9,13 +9,21 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-VENDOR = ROOT / "vendor"
-INDEX = ROOT / "web" / "index.html"
+from src import paths
+
+BUNDLE = paths.bundle_dir()
+VENDOR = BUNDLE / "vendor"
+INDEX = BUNDLE / "web" / "index.html"
+ICON = BUNDLE / "assets" / "app.ico"
 
 
 def ensure_vendor_on_path() -> bool:
-    """把 vendor 注入 sys.path；返回它是否可用。"""
+    """把 vendor 注入 sys.path；返回它是否可用。
+
+    打包后依赖已由 PyInstaller 收进 exe，无需 vendor 目录。
+    """
+    if paths.is_frozen():
+        return True
     if not (VENDOR / "webview" / "__init__.py").is_file():
         return False
     if str(VENDOR) not in sys.path:
@@ -44,7 +52,8 @@ def main() -> None:
     bridge = Bridge()
     bridge.init()          # CREATE TABLE IF NOT EXISTS，可重复调用
     create_window(webview, bridge)
-    webview.start()
+    # 窗口/任务栏图标；图标不存在时 pywebview 会自行回退到默认图标
+    webview.start(icon=str(ICON) if ICON.is_file() else None)
 
 
 if __name__ == "__main__":

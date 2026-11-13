@@ -28,6 +28,15 @@ __pycache__/
 # C2 前端依赖：由 setup.bat 生成，含 .pyd 二进制与本机解释器记录，不进仓库
 vendor/
 
+# B 路线打包产物与构建中间目录（exe / 二进制一律不进仓库）
+dist/
+.build-venv/
+.build-work/
+*.spec.bak
+
+# 运行时日志（含本机路径）
+launch-error.log
+
 # 凭据
 .env
 *.key
