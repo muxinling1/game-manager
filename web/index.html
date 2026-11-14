@@ -210,6 +210,9 @@
   }
   .field input:focus, .field textarea:focus { border-color:var(--accent); }
   .field textarea { resize:vertical; min-height:56px; }
+  .field-row { display:flex; gap:8px; align-items:stretch; }
+  .field-row input { flex:1; min-width:0; }
+  .field-row .btn { flex:0 0 auto; padding:0 12px; font-size:12px; }
   .form-error { font-size:12px; color:#e2685f; min-height:18px; margin-top:4px; }
   .btn { height:32px; padding:0 14px; border-radius:5px; background:var(--panel3);
          color:var(--text); font-size:12.5px; }
@@ -324,7 +327,12 @@
       <button class="x" id="formClose">×</button></div>
     <div class="modal-body">
       <div class="field"><label>名称 *</label><input id="fName" placeholder="游戏名称"></div>
-      <div class="field"><label>游戏目录 *</label><input id="fPath" placeholder="D:\Games\Demo"></div>
+      <div class="field"><label>游戏目录 *</label>
+        <div class="field-row">
+          <input id="fPath" placeholder="D:\Games\Demo">
+          <button class="btn" id="fPathOpen" type="button" title="在文件管理器中打开该目录">打开目录</button>
+        </div>
+      </div>
       <div class="field"><label>可执行文件 *</label><input id="fExe" placeholder="demo.exe"></div>
       <div class="field"><label>启动参数</label><input id="fArgs" placeholder="-windowed"></div>
       <div class="field"><label>标签（逗号分隔）</label><input id="fTags" placeholder="动作, 独立"></div>
@@ -901,6 +909,11 @@
   $("formClose").addEventListener("click", closeAll);
   $("formCancel").addEventListener("click", closeAll);
   $("formSave").addEventListener("click", saveForm);
+  $("fPathOpen").addEventListener("click", async () => {
+    const res = await api().open_folder($("fPath").value);
+    if (!res.ok) $("formError").textContent = res.error || "打开目录失败";
+    else $("formError").textContent = "";
+  });
   $("confirmClose").addEventListener("click", closeAll);
   $("confirmCancel").addEventListener("click", closeAll);
   $("confirmYes").addEventListener("click", doDelete);

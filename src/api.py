@@ -95,18 +95,31 @@ def _default_image_picker(directory: str = "") -> str | None:
     return result[0] if isinstance(result, (tuple, list)) else str(result)
 
 
+def _default_folder_opener(path: str) -> None:
+    """用系统文件管理器打开目录（调用方已校验是存在的文件夹）。"""
+    if platform.system() == "Windows":
+        import os
+        os.startfile(path)                       # noqa: S606 - 仅打开目录
+    elif platform.system() == "Darwin":
+        subprocess.Popen(["open", path])
+    else:
+        subprocess.Popen(["xdg-open", path])
+
+
 class Bridge:
     def __init__(self, database: db.GameDB | None = None,
                  directory_picker: Callable[[], list[str]] | None = None,
                  process_launcher: Callable[[dict[str, Any]],
                                            subprocess.Popen] | None = None,
-                 image_picker: Callable[[str], str | None] | None = None) -> None:
+                 image_picker: Callable[[str], str | None] | None = None,
+                 folder_opener: Callable[[str], None] | None = None) -> None:
         # 不在构造时建表：让测试可以传入临时库而不产生副作用；
         # 真实启动时由 webapp.main() 调用 init()。
         self.database = database or db.GameDB()
         self.directory_picker = directory_picker or _default_directory_picker
         self.process_launcher = process_launcher or launcher.launch
         self.image_picker = image_picker or _default_image_picker
+        self.folder_opener = folder_opener or _default_folder_opener
         self._running: dict[int, subprocess.Popen] = {}
         self._lock = threading.Lock()
 
@@ -201,6 +214,20 @@ class Bridge:
         row = self.database.get(game_id)
         directory = row["path"] if row and Path(row["path"]).is_dir() else ""
         return self.image_picker(directory)
+
+    def open_folder(self, path: str) -> dict[str, Any]:
+        """在系统文件管理器中打开该目录（只读动作，绝不执行任何文件）。"""
+        raw = (path or "").strip()
+        if not raw:                  # Path("") 会变成当前目录，必须先挡掉
+            return {"ok": False, "error": "请先填写游戏目录"}
+        target = Path(raw)
+        if not target.is_dir():
+            return {"ok": False, "error": "目录不存在或不是有效文件夹"}
+        try:
+            self.folder_opener(str(target))
+        except OSError as exc:
+            return {"ok": False, "error": f"无法打开目录: {exc}"}
+        return {"ok": True}
 
     # --- W3 增删改 ---
     def add_game(self, fields: dict[str, Any]) -> dict[str, Any]:
