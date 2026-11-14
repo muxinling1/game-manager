@@ -94,6 +94,12 @@ def create_window(webview, bridge):
 
 
 def main() -> None:
+    # 打包后的 exe 才做单实例：第二次运行激活已有窗口并退出，不再开新窗口。
+    # 源码模式不限制，方便边改边多开调试。
+    if paths.is_frozen():
+        from src import single_instance
+        if not single_instance.acquire():
+            return
     if not ensure_vendor_on_path():
         raise SystemExit("依赖未安装：请先运行 setup.bat（仅需联网一次）")
     import webview  # noqa: E402  (延迟导入，保证未装依赖时也能给出提示)
