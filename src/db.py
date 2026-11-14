@@ -28,10 +28,18 @@ CREATE TABLE IF NOT EXISTS games (
     added_at    TEXT    NOT NULL,
     last_played TEXT,
     play_count  INTEGER NOT NULL DEFAULT 0,
+    cover       BLOB,
+    cover_mime  TEXT    NOT NULL DEFAULT '',
     UNIQUE (path, exe)
 );
 CREATE INDEX IF NOT EXISTS idx_games_name ON games (name);
 """
+
+# 列表/详情返回的列：故意不含 cover BLOB，避免把图片字节塞进前端响应
+_LIST_COLUMNS = ("id", "name", "path", "exe", "args", "tags", "note",
+                 "added_at", "last_played", "play_count")
+_SELECT = (", ".join(_LIST_COLUMNS)
+           + ", (cover IS NOT NULL AND length(cover) > 0) AS has_cover")
 
 
 def _now() -> str:
@@ -70,9 +78,15 @@ class GameDB:
             conn.close()
 
     def init(self) -> None:
-        """建表，可重复调用。"""
+        """建表并幂等补齐封面列，可重复调用（老库不丢数据）。"""
         with self._session() as conn:
             conn.executescript(_SCHEMA)
+            cols = {r["name"] for r in conn.execute("PRAGMA table_info(games)")}
+            if "cover" not in cols:
+                conn.execute("ALTER TABLE games ADD COLUMN cover BLOB")
+            if "cover_mime" not in cols:
+                conn.execute("ALTER TABLE games ADD COLUMN cover_mime "
+                             "TEXT NOT NULL DEFAULT ''")
 
     def add(self, *, name: str, path: str, exe: str,
             args: str = "", tags: str = "", note: str = "") -> int:
@@ -115,9 +129,38 @@ class GameDB:
     def get(self, game_id: int) -> dict[str, Any] | None:
         with self._session() as conn:
             row = conn.execute(
-                "SELECT * FROM games WHERE id = ?", (game_id,)
+                f"SELECT {_SELECT} FROM games WHERE id = ?", (game_id,)
             ).fetchone()
             return dict(row) if row is not None else None
+
+    def get_cover(self, game_id: int) -> tuple[bytes, str] | None:
+        """读取封面缩略图字节与 MIME；无封面或 id 不存在返回 None。"""
+        with self._session() as conn:
+            row = conn.execute(
+                "SELECT cover, cover_mime FROM games WHERE id = ?", (game_id,)
+            ).fetchone()
+        if row is None or row["cover"] is None:
+            return None
+        return bytes(row["cover"]), row["cover_mime"]
+
+    def set_cover(self, game_id: int, blob: bytes, mime: str) -> bool:
+        """写入封面缩略图（字节由桥接层用 Pillow 生成）。"""
+        if not blob:
+            return self.clear_cover(game_id)
+        with self._session() as conn:
+            cur = conn.execute(
+                "UPDATE games SET cover = ?, cover_mime = ? WHERE id = ?",
+                (sqlite3.Binary(blob), mime, game_id),
+            )
+            return cur.rowcount > 0
+
+    def clear_cover(self, game_id: int) -> bool:
+        with self._session() as conn:
+            cur = conn.execute(
+                "UPDATE games SET cover = NULL, cover_mime = '' WHERE id = ?",
+                (game_id,),
+            )
+            return cur.rowcount > 0
 
     def record_play(self, game_id: int) -> bool:
         """记一次游玩：写最后游玩时间、次数 +1；id 不存在返回 False。"""
@@ -133,7 +176,8 @@ class GameDB:
         """按名称（中文 / 全拼 / 首字母）前缀搜索，再按标签前缀过滤，按名称排序。"""
         with self._session() as conn:
             rows = [dict(r) for r in conn.execute(
-                "SELECT * FROM games ORDER BY name COLLATE NOCASE, id").fetchall()]
+                f"SELECT {_SELECT} FROM games "
+                "ORDER BY name COLLATE NOCASE, id").fetchall()]
         if keyword.strip():
             rows = [r for r in rows if pinyin.match(r["name"], keyword)]
         if tag.strip():
