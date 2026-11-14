@@ -19,7 +19,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from src import db, launcher, scanner
+from src import covers, db, launcher, scanner
 
 # 表单允许写入/更新的列（与 db.UPDATABLE_FIELDS 一致）
 FORM_FIELDS = ("name", "path", "exe", "args", "tags", "note")
@@ -133,6 +133,42 @@ class Bridge:
             "played": sum(1 for r in rows if r["play_count"] > 0),
             "launches": sum(r["play_count"] for r in rows),
         }
+
+    # --- C2 封面 ---
+    def get_cover(self, game_id: int) -> dict[str, Any]:
+        """返回可直接放进 <img src> 的 data URI；无封面返回 ok=False。"""
+        cover = self.database.get_cover(game_id)
+        if cover is None:
+            return {"ok": False, "error": "无封面"}
+        blob, mime = cover
+        return {"ok": True, "uri": covers.data_uri(blob, mime),
+                "mime": mime, "bytes": len(blob)}
+
+    def set_cover(self, game_id: int, file_path: str) -> dict[str, Any]:
+        """从本地图片生成 WebP 缩略图并写入 BLOB。"""
+        try:
+            path = Path(file_path)
+            if not path.is_file():
+                return {"ok": False, "error": "文件不存在"}
+            if path.suffix.lower() not in covers.IMAGE_SUFFIXES:
+                return {"ok": False, "error": "不支持的图片格式"}
+            blob, mime = covers.make_thumbnail(path.read_bytes())
+            changed = self.database.set_cover(game_id, blob, mime)
+            return {"ok": changed,
+                    "error": "" if changed else "记录不存在",
+                    "bytes": len(blob)}
+        except (OSError, ValueError, RuntimeError) as exc:
+            return {"ok": False, "error": str(exc)}
+
+    def clear_cover(self, game_id: int) -> dict[str, Any]:
+        return {"ok": self.database.clear_cover(game_id)}
+
+    def find_cover_candidates(self, game_id: int) -> dict[str, Any]:
+        """只读查找该游戏目录里的候选封面，绝不自动设置（由用户挑选）。"""
+        row = self.database.get(game_id)
+        if row is None:
+            return {"ok": False, "error": "记录不存在", "paths": []}
+        return {"ok": True, "paths": covers.discover_covers(row["path"])}
 
     # --- W3 增删改 ---
     def add_game(self, fields: dict[str, Any]) -> dict[str, Any]:
