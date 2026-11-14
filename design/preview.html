@@ -249,7 +249,7 @@
     <div class="brand"><b>本地游戏库</b><span>LOCAL GAME MANAGER</span></div>
     <label class="search">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-      <input id="q" type="text" placeholder="搜索名称、标签、路径…">
+      <input id="q" type="text" placeholder="搜索游戏名称…">
     </label>
     <div class="tag-picker" id="tagPicker">
       <input id="tagInput" class="tag-input" type="text"
@@ -292,7 +292,7 @@
     <div class="scroll">
       <div class="list-head"><span></span><span>名称</span><span>标签</span><span>路径</span><span>次数</span><span>状态 / 最后游玩</span></div>
       <div class="grid" id="grid"></div>
-      <div class="empty" id="empty" style="display:none">没有匹配的游戏，换个关键字或标签试试。</div>
+      <div class="empty" id="empty" style="display:none">没有匹配的游戏名称，换个名称试试。</div>
     </div>
     <div class="detail empty-detail" id="detail">单击任意游戏查看信息</div>
   </section>
@@ -405,7 +405,7 @@
       const kw = (opts.keyword || "").toLowerCase();
       const tag = (opts.tag || "").trim();
       let out = rows.filter(r =>
-        (!kw || (r.name + r.tags + r.path + r.note).toLowerCase().includes(kw)) &&
+        (!kw || r.name.toLowerCase().startsWith(kw)) &&
         (!tag || r.tags.split(",").map(t => t.trim()).some(t => t.toLowerCase().startsWith(tag.trim().toLowerCase()))));
       if (opts.view === "recent")
         out = out.slice().sort((a,b) => (b.last_played||"").localeCompare(a.last_played||""));
@@ -651,10 +651,13 @@
 
   function setView(view) {
     state.view = view;
+    state.tag = "";                 // 切换视图时取消标签选择
+    $("tagInput").value = "";
     $("navAll").classList.toggle("on", view === "all");
     $("navRecent").classList.toggle("on", view === "recent");
     $("viewTitle").textContent = view === "all" ? "所有游戏" : "最近游玩";
     refreshGames();
+    refreshSide();                  // 重渲染左栏标签高亮与顶栏面板实心圆
   }
   function setMode(mode) {
     state.mode = mode;

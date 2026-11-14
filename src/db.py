@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from src import paths  # noqa: E402
+from src import paths, pinyin  # noqa: E402
 
 DEFAULT_DB_PATH = paths.data_dir() / "games.db"
 
@@ -48,10 +48,6 @@ def split_tags(tags: str) -> list[str]:
 
 def _normalize_tags(tags: str) -> str:
     return ",".join(split_tags(tags))
-
-
-def _escape_like(text: str) -> str:
-    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 class GameDB:
@@ -134,17 +130,12 @@ class GameDB:
             return cur.rowcount > 0
 
     def list(self, keyword: str = "", tag: str = "") -> list[dict[str, Any]]:
-        """按名称/路径/备注模糊搜索，再按标签前缀过滤，结果按名称排序。"""
-        sql = "SELECT * FROM games"
-        params: list[Any] = []
-        if keyword.strip():
-            sql += (" WHERE (name LIKE ? ESCAPE '\\' OR path LIKE ? ESCAPE '\\' "
-                    "OR note LIKE ? ESCAPE '\\')")
-            like = f"%{_escape_like(keyword.strip())}%"
-            params.extend((like, like, like))
-        sql += " ORDER BY name COLLATE NOCASE, id"
+        """按名称（中文 / 全拼 / 首字母）前缀搜索，再按标签前缀过滤，按名称排序。"""
         with self._session() as conn:
-            rows = [dict(r) for r in conn.execute(sql, params).fetchall()]
+            rows = [dict(r) for r in conn.execute(
+                "SELECT * FROM games ORDER BY name COLLATE NOCASE, id").fetchall()]
+        if keyword.strip():
+            rows = [r for r in rows if pinyin.match(r["name"], keyword)]
         if tag.strip():
             wanted = tag.strip().casefold()
             rows = [r for r in rows

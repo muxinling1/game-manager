@@ -18,6 +18,7 @@ a = Analysis(
     datas=[
         (os.path.join(ROOT, 'web', 'index.html'), 'web'),
         (os.path.join(ROOT, 'assets', 'app.ico'), 'assets'),
+        (os.path.join(ROOT, 'src', 'pinyin_data.json'), 'src'),
     ],
     hiddenimports=['clr', 'clr_loader', 'pythonnet', 'webview'],
     hookspath=[],

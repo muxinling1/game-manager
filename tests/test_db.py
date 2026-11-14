@@ -103,16 +103,41 @@ class GameDBTests(unittest.TestCase):
             [r["name"] for r in self.db.list()], ["Alpha", "Beta", "Zelda"])
         self.assertEqual(
             [r["name"] for r in self.db.list(keyword="Alpha")], ["Alpha"])
-        self.assertEqual(
-            [r["name"] for r in self.db.list(keyword="动作")], ["Beta"])
+        # 关键字只匹配游戏名称；标签、备注、路径里的词都不应命中
+        self.assertEqual(self.db.list(keyword="动作"), [])
+        self.assertEqual(self.db.list(keyword="Games"), [])
         self.assertEqual(
             {r["name"] for r in self.db.list(tag="动作")}, {"Zelda", "Alpha"})
 
-    def test_keyword_wildcards_are_literal(self):
-        self._add(name="100% 完成", path=r"D:\Games\P", exe="p.exe")
-        self._add(name="普通", path=r"D:\Games\N", exe="n.exe")
+    def test_keyword_only_matches_name(self):
+        self._add(name="Elden Ring", path=r"D:\Games\ER", exe="er.exe",
+                  tags="动作", note="角色扮演大作")
         self.assertEqual(
-            [r["name"] for r in self.db.list(keyword="%")], ["100% 完成"])
+            [r["name"] for r in self.db.list(keyword="Elden")], ["Elden Ring"])
+        self.assertEqual(self.db.list(keyword="动作"), [])
+        self.assertEqual(self.db.list(keyword="角色扮演"), [])
+        self.assertEqual(self.db.list(keyword="Games"), [])
+
+    def test_keyword_prefix_match(self):
+        self._add(name="Alpha", path="P/A", exe="a.exe")
+        self._add(name="Half-Life", path="P/H", exe="h.exe")
+        self._add(name="Stardew Valley", path="P/S", exe="s.exe")
+        # 只匹配名称开头；中间含该字符的名称不应命中
+        self.assertEqual([r["name"] for r in self.db.list(keyword="a")], ["Alpha"])
+        self.assertEqual([r["name"] for r in self.db.list(keyword="A")], ["Alpha"])
+        self.assertEqual(self.db.list(keyword="life"), [])
+        self.assertEqual(
+            [r["name"] for r in self.db.list(keyword="Star")], ["Stardew Valley"])
+
+    def test_keyword_wildcards_are_literal(self):
+        self._add(name="% 开头", path=r"D:\Games\P", exe="p.exe")
+        self._add(name="_ 下划线", path=r"D:\Games\U", exe="u.exe")
+        self._add(name="普通", path=r"D:\Games\N", exe="n.exe")
+        # % 和 _ 按字面匹配前缀，不会被当成通配符命中所有行
+        self.assertEqual(
+            [r["name"] for r in self.db.list(keyword="%")], ["% 开头"])
+        self.assertEqual(
+            [r["name"] for r in self.db.list(keyword="_")], ["_ 下划线"])
 
     def test_data_persists_across_instances(self):
         gid = self._add()
