@@ -20,9 +20,10 @@ if not exist "%BV%" (
     echo Creating build venv ...
     "%PY%" -m venv .build-venv
     if errorlevel 1 goto failed
-    "%BV%" -m pip install --disable-pip-version-check -r requirements.txt pyinstaller
-    if errorlevel 1 goto failed
 )
+rem Always sync requirements (idempotent): picks up packages added later (e.g. Pillow).
+"%BV%" -m pip install --disable-pip-version-check -r requirements.txt pyinstaller
+if errorlevel 1 goto failed
 
 echo Building exe (about 30-60s) ...
 "%BV%" -m PyInstaller --noconfirm --distpath dist --workpath .build-work game-manager.spec
