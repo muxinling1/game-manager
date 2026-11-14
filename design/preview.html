@@ -117,6 +117,19 @@
   .cover .shine { position:absolute; inset:0; background:linear-gradient(160deg,rgba(255,255,255,.16),transparent 55%); }
   .cover .ph { position:absolute; bottom:7px; left:0; right:0; text-align:center;
                font-size:9px; letter-spacing:.6px; color:rgba(255,255,255,.5); }
+  .cover .cover-img { position:absolute; inset:0; width:100%; height:100%;
+                      object-fit:cover; display:block; }
+  .detail-cover { width:44px; height:62px; border-radius:5px; object-fit:cover;
+                  border:1px solid var(--line); flex:none; }
+  .cover-cand { display:flex; align-items:center; gap:10px; padding:8px 10px;
+                font-size:12.5px; border-bottom:1px solid var(--line-soft); cursor:pointer; }
+  .cover-cand:last-child { border-bottom:0; }
+  .cover-cand:hover { background:var(--panel2); }
+  .cover-cand .info { flex:1; min-width:0; }
+  .cover-cand .info b { display:block; font-weight:600; font-size:11.5px;
+                        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cover-cand .info span { display:block; font-size:10.5px; color:var(--muted2);
+                           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .card .name { font-size:12.5px; margin-top:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .card.selected .name { color:var(--accent-hi); }
   .card .meta { font-size:10.5px; color:var(--muted2); margin-top:2px;
@@ -377,10 +390,37 @@
   </div>
 </div>
 
+<!-- 封面设置 -->
+<div class="overlay" id="coverOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2>设置封面</h2>
+      <button class="x" id="coverClose">×</button></div>
+    <div class="modal-body">
+      <div class="hint">选择本地图片（文件框会直接打开该游戏目录，可自行挑选游戏图标），或列出游戏目录里的候选图片。图片会生成 WebP 缩略图存入 games.db。</div>
+      <div class="scan-row">
+        <button class="btn-primary" id="coverPick">选择图片…</button>
+        <button class="btn" id="coverAuto">列出候选</button>
+      </div>
+      <div class="hint" id="coverCandHint"></div>
+      <div class="cand-list" id="coverCandList"></div>
+      <div class="form-error" id="coverError"></div>
+    </div>
+    <div class="modal-foot">
+      <span class="spacer"></span>
+      <button class="btn danger" id="coverClear">清除封面</button>
+      <button class="btn" id="coverCancel">关闭</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* 样式稿专用：本地假数据，替代 window.pywebview.api，便于双击浏览器预览 */
 (function () {
   let nextId = 100;
+  const covers = new Map();
+  const FAKE_COVER = "data:image/svg+xml;base64," + btoa(
+    "<svg xmlns='http://www.w3.org/2000/svg' width='300' height='450'>" +
+    "<rect width='300' height='450' fill='#4c8bf5'/></svg>");
   const now = Date.now();
   const day = 86400000;
   const ago = n => new Date(now - n * day).toISOString().replace(/\.\d+Z$/, "+00:00");
@@ -394,6 +434,8 @@
     {id:7, name:"Baldur's Gate 3", path:"E:/Games/BG3",       exe:"bg3.exe",       args:"", tags:"角色扮演",     note:"", play_count:0,  last_played:null},
     {id:8, name:"Portal 2",        path:"D:/Games/Portal2",   exe:"portal2.exe",   args:"", tags:"解谜",         note:"", play_count:0,  last_played:null}
   ];
+  [1, 2, 3].forEach(id => covers.set(id, FAKE_COVER));
+  rows.forEach(r => { r.has_cover = [1, 2, 3].includes(r.id) ? 1 : 0; });
   const running = new Map();
   const ok = v => Promise.resolve(v);
   const stats = () => ({total: rows.length,
@@ -403,6 +445,21 @@
   const api = {
     get_version: () => ok("Python 3.12.14 · 样式稿预览"),
     ping: () => ok("pong"),
+    get_cover: id => ok(covers.has(id)
+      ? {ok:true, uri:covers.get(id)} : {ok:false}),
+    set_cover: (id, path) => {
+      covers.set(id, FAKE_COVER);
+      const r = rows.find(x => x.id === id); if (r) r.has_cover = 1;
+      return ok({ok:true});
+    },
+    clear_cover: id => {
+      covers.delete(id);
+      const r = rows.find(x => x.id === id); if (r) r.has_cover = 0;
+      return ok({ok:true});
+    },
+    find_cover_candidates: id => ok({ok:true,
+      paths:["D:/Games/Demo/cover.jpg", "D:/Games/Demo/assets/poster.png"]}),
+    pick_image_file: id => ok("D:/Games/Demo/cover.jpg"),
     list_games: (opts) => {
       opts = opts || {};
       const kw = (opts.keyword || "").toLowerCase();
@@ -496,7 +553,8 @@
     const color = coverColor(row.name);
     const short = esc(row.last_played || "—");
     const running = state.running.includes(row.id);
-    return `<div class="card${running ? " running" : ""}" data-id="${row.id}">
+    return `<div class="card${running ? " running" : ""}" data-id="${row.id}"
+                 data-has-cover="${row.has_cover ? 1 : 0}">
       <div class="cover" style="background:${color}">
         <div class="grain"></div><div class="shine"></div>
         <div class="initials">${esc(initials(row.name))}</div>
@@ -509,6 +567,31 @@
       <div class="meta m-plays">${row.play_count} 次</div>
       <div class="meta m-state${running ? " state-running" : ""}">${running ? "运行中" : short}</div>
     </div>`;
+  }
+
+  const coverCache = new Map();          // id -> data URI（null 表示无封面）
+
+  async function coverUri(id) {
+    if (coverCache.has(id)) return coverCache.get(id);
+    const res = await api().get_cover(id);
+    const uri = res && res.ok ? res.uri : null;
+    coverCache.set(id, uri);
+    return uri;
+  }
+
+  async function loadCovers() {
+    const cards = [...document.querySelectorAll('.card[data-has-cover="1"]')];
+    await Promise.all(cards.map(async card => {
+      const uri = await coverUri(+card.dataset.id);
+      const cover = card.querySelector(".cover");
+      if (!uri || !cover || cover.querySelector(".cover-img")) return;
+      const img = document.createElement("img");
+      img.className = "cover-img";
+      img.alt = "";
+      img.src = uri;
+      cover.appendChild(img);
+      cover.querySelectorAll(".initials, .ph").forEach(el => el.style.display = "none");
+    }));
   }
 
   function renderGames() {
@@ -527,6 +610,7 @@
       const hit = grid.querySelector(`.card[data-id="${state.selected}"]`);
       if (hit) hit.classList.add("selected");
     }
+    loadCovers();
   }
 
   async function refreshGames() {
@@ -600,7 +684,9 @@
     if (!row) return;
     const detail = $("detail");
     detail.className = "detail";
+    const cover = row.has_cover ? await coverUri(row.id) : null;
     detail.innerHTML = `
+      ${cover ? `<img class="detail-cover" src="${cover}" alt="">` : ""}
       <div><div class="d-title">${esc(row.name)}</div>
            <div class="d-sub">${esc(row.tags || "无标签")}</div></div>
       <div class="d-fields">
@@ -609,9 +695,11 @@
         <div>路径<b>${esc(row.path)}</b></div>
         <div>可执行<b>${esc(row.exe)}</b></div>
       </div>
+      <button class="btn" id="detailCover" data-id="${row.id}">设置封面</button>
       <button class="btn" id="detailEdit" data-id="${row.id}">编辑</button>
       <button class="btn danger" id="detailDelete" data-id="${row.id}" data-name="${esc(row.name)}">删除</button>
       <button class="btn-primary" id="detailLaunch" data-id="${row.id}">▶ 启动游戏</button>`;
+    $("detailCover").addEventListener("click", () => openCoverDialog(row.id));
     $("detailEdit").addEventListener("click", () => openEdit(row.id));
     $("detailDelete").addEventListener("click", () => askDelete(row.id, row.name));
     $("detailLaunch").addEventListener("click", () => launchSelected(row.id));
@@ -702,10 +790,80 @@
     showOverlay("formOverlay", false);
     showOverlay("scanOverlay", false);
     showOverlay("confirmOverlay", false);
+    showOverlay("coverOverlay", false);
   }
   async function refreshAll() {
     await Promise.all([refreshGames(), refreshSide()]);
   }
+
+  // ---------- C3：封面 ----------
+  const coverState = { id: null, paths: [] };
+
+  function openCoverDialog(id) {
+    coverState.id = id;
+    coverState.paths = [];
+    $("coverCandHint").textContent = "";
+    $("coverCandList").innerHTML = "";
+    $("coverError").textContent = "";
+    closeAll();
+    showOverlay("coverOverlay", true);
+  }
+
+  async function afterCoverChanged(id, message) {
+    coverCache.delete(id);
+    closeAll();
+    await refreshGames();
+    await select(id, null);
+    $("lastEvent").textContent = message;
+    $("lastEvent").style.color = "";
+  }
+
+  async function applyCover(path) {
+    const res = await api().set_cover(coverState.id, path);
+    if (!res.ok) {
+      $("coverError").textContent = res.error || "设置失败";
+      return;
+    }
+    await afterCoverChanged(coverState.id, "封面已更新");
+  }
+
+  async function removeCover() {
+    const res = await api().clear_cover(coverState.id);
+    if (!res.ok) {
+      $("coverError").textContent = "清除失败";
+      return;
+    }
+    await afterCoverChanged(coverState.id, "封面已清除");
+  }
+
+  $("coverClose").addEventListener("click", closeAll);
+  $("coverCancel").addEventListener("click", closeAll);
+  $("coverPick").addEventListener("click", async () => {
+    const path = await api().pick_image_file(coverState.id);
+    if (path) await applyCover(path);
+  });
+  $("coverAuto").addEventListener("click", async () => {
+    const res = await api().find_cover_candidates(coverState.id);
+    if (!res.ok) { $("coverError").textContent = res.error; return; }
+    coverState.paths = res.paths || [];
+    const list = $("coverCandList");
+    if (!coverState.paths.length) {
+      $("coverCandHint").textContent = "该游戏目录里没有找到候选图片。";
+      list.innerHTML = "";
+      return;
+    }
+    $("coverCandHint").textContent =
+      `找到 ${coverState.paths.length} 个候选，点击即设为封面：`;
+    list.innerHTML = coverState.paths.map((p, i) =>
+      `<div class="cover-cand" data-i="${i}">
+         <span class="info"><b>${esc(p)}</b></span>
+       </div>`).join("");
+    list.querySelectorAll(".cover-cand").forEach(el => {
+      el.addEventListener("click", () =>
+        applyCover(coverState.paths[+el.dataset.i]));
+    });
+  });
+  $("coverClear").addEventListener("click", removeCover);
 
   function fillForm(row) {
     $("fName").value = row ? row.name : "";

@@ -74,16 +74,39 @@ def _default_directory_picker() -> list[str]:
     return [result] if isinstance(result, str) else list(result)
 
 
+def _default_image_picker(directory: str = "") -> str | None:
+    """调用 pywebview 的图片选择框；没有窗口或取消返回 None。
+
+    ``directory`` 为对话框初始目录（通常是游戏目录，方便用户自己挑图标）。
+    """
+    try:
+        import webview
+    except ImportError:
+        return None
+    if not webview.windows:
+        return None
+    result = webview.windows[0].create_file_dialog(
+        webview.FileDialog.OPEN,
+        directory=directory,
+        file_types=("图片文件 (*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif;*.ico)",),
+    )
+    if not result:
+        return None
+    return result[0] if isinstance(result, (tuple, list)) else str(result)
+
+
 class Bridge:
     def __init__(self, database: db.GameDB | None = None,
                  directory_picker: Callable[[], list[str]] | None = None,
                  process_launcher: Callable[[dict[str, Any]],
-                                           subprocess.Popen] | None = None) -> None:
+                                           subprocess.Popen] | None = None,
+                 image_picker: Callable[[str], str | None] | None = None) -> None:
         # 不在构造时建表：让测试可以传入临时库而不产生副作用；
         # 真实启动时由 webapp.main() 调用 init()。
         self.database = database or db.GameDB()
         self.directory_picker = directory_picker or _default_directory_picker
         self.process_launcher = process_launcher or launcher.launch
+        self.image_picker = image_picker or _default_image_picker
         self._running: dict[int, subprocess.Popen] = {}
         self._lock = threading.Lock()
 
@@ -169,6 +192,15 @@ class Bridge:
         if row is None:
             return {"ok": False, "error": "记录不存在", "paths": []}
         return {"ok": True, "paths": covers.discover_covers(row["path"])}
+
+    def pick_image_file(self, game_id: int) -> str | None:
+        """打开图片选择框，初始目录定位到该游戏目录，由用户自己挑选。
+
+        返回所选文件路径；可注入假 picker（接收初始目录）便于测试。
+        """
+        row = self.database.get(game_id)
+        directory = row["path"] if row and Path(row["path"]).is_dir() else ""
+        return self.image_picker(directory)
 
     # --- W3 增删改 ---
     def add_game(self, fields: dict[str, Any]) -> dict[str, Any]:

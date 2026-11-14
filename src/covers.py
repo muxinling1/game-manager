@@ -21,6 +21,19 @@ COVER_KEYWORDS = ("cover", "poster", "banner", "folder", "boxart",
 MAX_CANDIDATES = 12
 
 
+def _best_ico_frame(src):
+    """ICO 取最大尺寸帧（避免默认取到 16×16）；其它格式原样返回。"""
+    if getattr(src, "format", None) != "ICO":
+        return src
+    try:
+        sizes = src.ico.sizes()
+        if sizes:
+            return src.ico.getimage(max(sizes, key=lambda s: s[0] * s[1]))
+    except (AttributeError, OSError):
+        pass
+    return src
+
+
 def make_thumbnail(data: bytes) -> tuple[bytes, str]:
     """把图片字节等比缩到 300×450 以内并输出 WebP，返回 (字节, MIME)。"""
     if not data:
@@ -34,10 +47,13 @@ def make_thumbnail(data: bytes) -> tuple[bytes, str]:
     try:
         with Image.open(io.BytesIO(data)) as src:
             src.seek(0)                  # GIF 等动图只取第一帧
+            frame = _best_ico_frame(src)
             # 保留透明通道；不透明图用 RGB 省体积
-            mode = "RGBA" if ("A" in src.getbands() or src.mode == "P") else "RGB"
-            im = src.convert(mode)
-            im = ImageOps.contain(im, THUMB_SIZE, Image.LANCZOS)
+            mode = "RGBA" if ("A" in frame.getbands() or frame.mode == "P") else "RGB"
+            im = frame.convert(mode)
+            # 只缩小、不放大：小图标保持原分辨率，避免放大后糊掉
+            if im.width > THUMB_SIZE[0] or im.height > THUMB_SIZE[1]:
+                im = ImageOps.contain(im, THUMB_SIZE, Image.LANCZOS)
             out = io.BytesIO()
             im.save(out, format="WEBP", quality=WEBP_QUALITY, method=4)
     except UnidentifiedImageError as exc:
@@ -67,8 +83,9 @@ def _candidate_dirs(root: Path, max_depth: int):
 
 def discover_covers(game_dir: str | Path, *,
                     max_depth: int = 1) -> list[str]:
-    """只读查找候选封面，按「文件名含封面关键词优先」排序返回绝对路径。
+    """只读查找候选封面，按「根目录优先、封面关键词优先」排序返回绝对路径。
 
+    只列出候选、绝不替用户做选择或自动设置。
     全程只看目录条目和文件大小，不打开、不执行、不修改任何文件。
     """
     root = Path(game_dir)
