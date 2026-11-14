@@ -55,15 +55,15 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual({r["name"] for r in rows}, {"Alpha", "Beta"})
         self.assertEqual(len(self.bridge.list_games()), 3)
 
-    def test_list_games_recent_sorts_played_first(self):
-        self._add("Alpha")
-        self._add("Beta", plays=1)
+    def test_list_games_recent_only_shows_recently_played(self):
+        self._add("Alpha")            # 从未启动 → 排除
+        self._add("Beta", plays=1)    # 刚启动过 → 保留
         self.assertEqual(
             [r["name"] for r in self.bridge.list_games({"view": "all"})],
             ["Alpha", "Beta"])
         self.assertEqual(
             [r["name"] for r in self.bridge.list_games({"view": "recent"})],
-            ["Beta", "Alpha"])
+            ["Beta"])
 
     def test_get_tags_counts_real_data(self):
         self._add("A", tags="动作, 独立")

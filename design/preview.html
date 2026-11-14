@@ -381,11 +381,14 @@
 /* 样式稿专用：本地假数据，替代 window.pywebview.api，便于双击浏览器预览 */
 (function () {
   let nextId = 100;
+  const now = Date.now();
+  const day = 86400000;
+  const ago = n => new Date(now - n * day).toISOString().replace(/\.\d+Z$/, "+00:00");
   const rows = [
-    {id:1, name:"ELDEN RING",      path:"D:/Games/ELDEN RING", exe:"eldenring.exe", args:"", tags:"动作,角色扮演", note:"", play_count:12, last_played:"2026-11-12T14:02:11+00:00"},
-    {id:2, name:"Stardew Valley",  path:"D:/Games/Stardew",   exe:"stardew.exe",   args:"", tags:"独立,模拟",     note:"", play_count:8,  last_played:"2026-11-10T09:31:00+00:00"},
-    {id:3, name:"Hollow Knight",   path:"D:/Games/Hollow",    exe:"hollow.exe",    args:"", tags:"动作,独立",     note:"", play_count:4,  last_played:"2026-11-08T20:15:42+00:00"},
-    {id:4, name:"Cyberpunk 2077",  path:"E:/Games/CP2077",    exe:"cp2077.exe",    args:"", tags:"动作,角色扮演", note:"", play_count:3,  last_played:"2026-11-05T18:44:09+00:00"},
+    {id:1, name:"ELDEN RING",      path:"D:/Games/ELDEN RING", exe:"eldenring.exe", args:"", tags:"动作,角色扮演", note:"", play_count:12, last_played:ago(0.2)},
+    {id:2, name:"Stardew Valley",  path:"D:/Games/Stardew",   exe:"stardew.exe",   args:"", tags:"独立,模拟",     note:"", play_count:8,  last_played:ago(2)},
+    {id:3, name:"Hollow Knight",   path:"D:/Games/Hollow",    exe:"hollow.exe",    args:"", tags:"动作,独立",     note:"", play_count:4,  last_played:ago(5)},
+    {id:4, name:"Cyberpunk 2077",  path:"E:/Games/CP2077",    exe:"cp2077.exe",    args:"", tags:"动作,角色扮演", note:"", play_count:3,  last_played:ago(9)},
     {id:5, name:"Hades",           path:"D:/Games/Hades",     exe:"hades.exe",     args:"", tags:"动作,独立",     note:"", play_count:0,  last_played:null},
     {id:6, name:"Terraria",        path:"D:/Games/Terraria",  exe:"terraria.exe",  args:"", tags:"独立,冒险",     note:"", play_count:0,  last_played:null},
     {id:7, name:"Baldur's Gate 3", path:"E:/Games/BG3",       exe:"bg3.exe",       args:"", tags:"角色扮演",     note:"", play_count:0,  last_played:null},
@@ -407,8 +410,12 @@
       let out = rows.filter(r =>
         (!kw || r.name.toLowerCase().startsWith(kw)) &&
         (!tag || r.tags.split(",").map(t => t.trim()).some(t => t.toLowerCase().startsWith(tag.trim().toLowerCase()))));
-      if (opts.view === "recent")
-        out = out.slice().sort((a,b) => (b.last_played||"").localeCompare(a.last_played||""));
+      if (opts.view === "recent") {
+        const cutoff = now - 7 * day;
+        out = out.filter(r => r.last_played &&
+                  new Date(r.last_played).getTime() >= cutoff)
+                 .sort((a,b) => (b.last_played||"").localeCompare(a.last_played||""));
+      }
       else out = out.slice().sort((a,b) => a.name.localeCompare(b.name));
       return ok(out.map(r => Object.assign({}, r)));
     },
@@ -508,6 +515,9 @@
     const grid = $("grid");
     grid.innerHTML = state.rows.map(cardHtml).join("");
     $("empty").style.display = state.rows.length ? "none" : "block";
+    $("empty").textContent = state.view === "recent"
+      ? "近 1 周没有启动过游戏"
+      : "没有匹配的游戏名称，换个名称试试。";
     $("statusCount").textContent = `共 ${state.rows.length} 款游戏`;
     $("viewSub").textContent = `显示 ${state.rows.length} 款 · ${state.mode === "grid" ? "网格" : "列表"}视图`;
     grid.querySelectorAll(".card").forEach(el => {

@@ -15,6 +15,7 @@ import platform
 import sqlite3
 import subprocess
 import threading
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -22,6 +23,35 @@ from src import db, launcher, scanner
 
 # 表单允许写入/更新的列（与 db.UPDATABLE_FIELDS 一致）
 FORM_FIELDS = ("name", "path", "exe", "args", "tags", "note")
+
+RECENT_DAYS = 7
+
+
+def _parse_time(value: str | None) -> datetime | None:
+    """把 last_played 解析成 UTC aware datetime；空或无效返回 None。"""
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def filter_recent(rows: list[dict[str, Any]],
+                  now: datetime | None = None) -> list[dict[str, Any]]:
+    """只保留近 1 周内启动过的游戏，按最后启动时间降序（最近的最前）。"""
+    now = now or datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=RECENT_DAYS)
+    timed: list[tuple[datetime, dict[str, Any]]] = []
+    for row in rows:
+        played = _parse_time(row.get("last_played"))
+        if played is not None and played >= cutoff:
+            timed.append((played, row))
+    timed.sort(key=lambda pair: pair[0], reverse=True)
+    return [row for _, row in timed]
 
 
 def _clean(fields: dict[str, Any] | None) -> dict[str, str]:
@@ -72,7 +102,7 @@ class Bridge:
                    ) -> list[dict[str, Any]]:
         """按关键字/标签过滤，返回可直接渲染的行。
 
-        view="recent" 时按最后游玩时间降序（与旧 tkinter 版一致）。
+        view="recent" 时只保留近 1 周内启动过的游戏，按最后启动时间降序。
         """
         options = options or {}
         rows = self.database.list(
@@ -80,7 +110,7 @@ class Bridge:
             tag=options.get("tag", ""),
         )
         if options.get("view") == "recent":
-            rows.sort(key=lambda r: r["last_played"] or "", reverse=True)
+            return filter_recent(rows)
         return rows
 
     def get_game(self, game_id: int) -> dict[str, Any] | None:

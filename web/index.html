@@ -420,6 +420,9 @@
     const grid = $("grid");
     grid.innerHTML = state.rows.map(cardHtml).join("");
     $("empty").style.display = state.rows.length ? "none" : "block";
+    $("empty").textContent = state.view === "recent"
+      ? "近 1 周没有启动过游戏"
+      : "没有匹配的游戏名称，换个名称试试。";
     $("statusCount").textContent = `共 ${state.rows.length} 款游戏`;
     $("viewSub").textContent = `显示 ${state.rows.length} 款 · ${state.mode === "grid" ? "网格" : "列表"}视图`;
     grid.querySelectorAll(".card").forEach(el => {
