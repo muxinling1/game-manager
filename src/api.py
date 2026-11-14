@@ -90,9 +90,8 @@ class Bridge:
         """按库里实际出现的标签统计数量，供左栏按钮使用。"""
         counts: dict[str, int] = {}
         for row in self.database.list():
-            for tag in (t.strip() for t in row["tags"].split(",")):
-                if tag:
-                    counts[tag] = counts.get(tag, 0) + 1
+            for tag in db.split_tags(row["tags"]):
+                counts[tag] = counts.get(tag, 0) + 1
         return [{"name": name, "count": counts[name]}
                 for name in sorted(counts)]
 

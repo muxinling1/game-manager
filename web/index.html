@@ -39,6 +39,27 @@
                border-radius:5px; padding:0 10px; color:var(--text); font-size:12px;
                font-family:inherit; outline:none; }
   .tag-input:focus { border-color:var(--accent); }
+  .tag-picker { position:relative; display:flex; align-items:center; gap:4px; }
+  .tag-toggle { height:32px; width:26px; flex:none; background:var(--panel2);
+                border:1px solid var(--line); border-radius:5px; color:var(--muted);
+                font-size:11px; cursor:pointer; }
+  .tag-toggle:hover { color:var(--text); border-color:var(--accent); }
+  .tag-menu { display:none; position:absolute; top:38px; right:0; width:210px;
+              max-height:300px; overflow-y:auto; z-index:60; padding:5px;
+              background:var(--panel2); border:1px solid var(--line);
+              border-radius:6px; box-shadow:0 10px 28px rgba(0,0,0,.5); }
+  .tag-menu.show { display:block; }
+  .tag-menu-item { display:flex; align-items:center; gap:9px; width:100%; height:30px;
+                   padding:0 8px; border:0; border-radius:4px; background:none;
+                   color:var(--muted); font-size:12.5px; font-family:inherit;
+                   text-align:left; cursor:pointer; }
+  .tag-menu-item:hover { background:var(--panel3); color:var(--text); }
+  .tag-menu-item.on { color:var(--accent-hi); }
+  .pick-dot { width:8px; height:8px; border-radius:50%; flex:none;
+              border:1.5px solid var(--muted2); }
+  .tag-menu-item.on .pick-dot { background:var(--accent); border-color:var(--accent); }
+  .tag-menu-item .count { margin-left:auto; font-size:11px; color:var(--muted2); }
+  .tag-menu-empty { padding:8px; font-size:11.5px; color:var(--muted2); }
   .top-actions { margin-left:auto; display:flex; align-items:center; gap:8px; }
   .icon-btn { width:32px; height:32px; border-radius:5px; background:transparent;
               color:var(--muted); display:grid; place-items:center; font-size:14px; }
@@ -228,7 +249,12 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
       <input id="q" type="text" placeholder="搜索名称、标签、路径…">
     </label>
-    <input id="tagInput" class="tag-input" type="text" placeholder="标签筛选…">
+    <div class="tag-picker" id="tagPicker">
+      <input id="tagInput" class="tag-input" type="text"
+             placeholder="标签筛选（支持前缀）…" autocomplete="off">
+      <button class="tag-toggle" id="tagToggle" type="button" title="选择标签">▾</button>
+      <div class="tag-menu" id="tagMenu"></div>
+    </div>
     <div class="top-actions">
       <div class="seg" title="视图切换">
         <button id="btnGrid" class="on" title="网格视图">▦</button>
@@ -412,8 +438,37 @@
     renderGames();
   }
 
+  function renderTagMenu(tags) {
+    const menu = $("tagMenu");
+    if (!tags.length) {
+      menu.innerHTML = `<div class="tag-menu-empty">（暂无标签）</div>`;
+      return;
+    }
+    // 始终渲染全量标签，不受当前筛选影响；选中项用实心圆标出
+    menu.innerHTML = tags.map(t => {
+      const on = state.tag === t.name;
+      return `<button type="button" class="tag-menu-item ${on ? "on" : ""}"
+        data-tag="${esc(t.name)}"><span class="pick-dot"></span>
+        <span>${esc(t.name)}</span><span class="count">${t.count}</span></button>`;
+    }).join("");
+    menu.querySelectorAll("[data-tag]").forEach(el => {
+      el.addEventListener("click", () => {
+        const t = el.dataset.tag;
+        state.tag = (state.tag === t) ? "" : t;
+        $("tagInput").value = state.tag;
+        refreshGames(); refreshSide();   // 面板不收起，重渲染出新的实心圆
+      });
+    });
+  }
+  function toggleTagMenu(force) {
+    const menu = $("tagMenu");
+    const show = (force === undefined) ? !menu.classList.contains("show") : force;
+    menu.classList.toggle("show", show);
+  }
+
   async function refreshSide() {
     const [tags, stats] = await Promise.all([api().get_tags(), api().get_stats()]);
+    renderTagMenu(tags);
     const box = $("tagList");
     if (!tags.length) {
       box.innerHTML = `<div style="font-size:11.5px;color:var(--muted2);padding:0 10px">（暂无标签）</div>`;
@@ -523,6 +578,11 @@
 
   $("q").addEventListener("input", e => { state.keyword = e.target.value; refreshGames(); });
   $("tagInput").addEventListener("input", e => { state.tag = e.target.value; refreshGames(); refreshSide(); });
+  $("tagInput").addEventListener("focus", () => toggleTagMenu(true));
+  $("tagToggle").addEventListener("click", e => { e.stopPropagation(); toggleTagMenu(); });
+  document.addEventListener("click", e => {
+    if (!$("tagPicker").contains(e.target)) toggleTagMenu(false);
+  });
   $("btnGrid").addEventListener("click", () => setMode("grid"));
   $("btnList").addEventListener("click", () => setMode("list"));
   $("btnRefresh").addEventListener("click", () => { refreshGames(); refreshSide(); });

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -37,8 +38,16 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+_TAG_SEPARATORS = re.compile(r"[,，]+")
+
+
+def split_tags(tags: str) -> list[str]:
+    """按中英文逗号拆分标签；顿号、分号、空格等一律视为标签内容。"""
+    return [t.strip() for t in _TAG_SEPARATORS.split(tags or "") if t.strip()]
+
+
 def _normalize_tags(tags: str) -> str:
-    return ",".join(t.strip() for t in tags.split(",") if t.strip())
+    return ",".join(split_tags(tags))
 
 
 def _escape_like(text: str) -> str:
@@ -125,7 +134,7 @@ class GameDB:
             return cur.rowcount > 0
 
     def list(self, keyword: str = "", tag: str = "") -> list[dict[str, Any]]:
-        """按名称/路径/备注模糊搜索，再按标签精确过滤，结果按名称排序。"""
+        """按名称/路径/备注模糊搜索，再按标签前缀过滤，结果按名称排序。"""
         sql = "SELECT * FROM games"
         params: list[Any] = []
         if keyword.strip():
@@ -137,7 +146,8 @@ class GameDB:
         with self._session() as conn:
             rows = [dict(r) for r in conn.execute(sql, params).fetchall()]
         if tag.strip():
-            wanted = tag.strip()
+            wanted = tag.strip().casefold()
             rows = [r for r in rows
-                    if wanted in [t.strip() for t in r["tags"].split(",")]]
+                    if any(t.casefold().startswith(wanted)
+                           for t in split_tags(r["tags"]))]
         return rows
