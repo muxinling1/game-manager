@@ -340,6 +340,21 @@ class Bridge:
             self._running[game_id] = process
         return {"ok": True, "running": True}
 
+    def stop_game(self, game_id: int) -> dict[str, Any]:
+        """停止运行中的游戏：终止进程并立即移出跟踪表。
+
+        主动移出可避免下一次 poll_status 把「被用户停止」误报成异常退出。
+        """
+        with self._lock:
+            process = self._running.pop(game_id, None)
+        if process is None:
+            return {"ok": False, "error": "该游戏未在运行"}
+        try:
+            process.terminate()
+        except OSError as exc:
+            return {"ok": False, "error": f"无法停止进程: {exc}"}
+        return {"ok": True, "stopped": True}
+
     def poll_status(self) -> dict[str, Any]:
         """前端定时调用：收割已退出的进程并回传运行状态。
 

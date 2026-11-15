@@ -14,11 +14,12 @@ from src import api, db  # noqa: E402
 
 
 class FakeProcess:
-    """可控的假进程：poll() 按预设序列返回。"""
+    """可控的假进程：poll() 按预设序列返回，terminate() 记录被停止。"""
 
     def __init__(self, codes):
         self.codes = list(codes)
         self.returncode = None
+        self.terminated = False
 
     def poll(self):
         if self.codes:
@@ -26,6 +27,12 @@ class FakeProcess:
             self.returncode = code
             return code
         return self.returncode
+
+    def terminate(self):
+        self.terminated = True
+        self.returncode = -15
+        self.codes = []
+        return None
 
 
 class LaunchTests(unittest.TestCase):
@@ -108,6 +115,64 @@ class LaunchTests(unittest.TestCase):
         self.bridge.launch_game(gid)
         st = self.bridge.poll_status()
         self.assertEqual(st["finished"][0]["returncode"], 3)
+
+
+class StopTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.processes = []
+        self.bridge = api.Bridge(
+            db.GameDB(Path(self.tmp.name) / "games.db"),
+            process_launcher=lambda game: self._spawn())
+        self.bridge.init()
+
+    def _spawn(self):
+        proc = FakeProcess([None, None])   # 一直「运行中」，不会自然退出
+        self.processes.append(proc)
+        return proc
+
+    def _add(self, name="Demo"):
+        return self.bridge.add_game(
+            {"name": name, "path": "D:/Games/Demo",
+             "exe": f"{name}.exe"})["id"]
+
+    def test_stop_terminates_process_and_removes_from_running(self):
+        gid = self._add()
+        self.bridge.launch_game(gid)
+        self.assertEqual(self.bridge.poll_status()["running"], [gid])
+        res = self.bridge.stop_game(gid)
+        self.assertTrue(res["ok"] and res.get("stopped"), res)
+        self.assertTrue(self.processes[0].terminated)
+        self.assertEqual(self.bridge.poll_status()["running"], [])
+
+    def test_stop_does_not_report_as_finished(self):
+        # 主动停止不应被当作「异常退出」回传给前端
+        gid = self._add()
+        self.bridge.launch_game(gid)
+        self.bridge.stop_game(gid)
+        st = self.bridge.poll_status()
+        self.assertEqual(st["finished"], [])
+
+    def test_stop_when_not_running(self):
+        res = self.bridge.stop_game(self._add())
+        self.assertFalse(res["ok"])
+        self.assertIn("未在运行", res["error"])
+
+    def test_stop_twice_second_fails(self):
+        gid = self._add()
+        self.bridge.launch_game(gid)
+        self.assertTrue(self.bridge.stop_game(gid)["ok"])
+        self.assertFalse(self.bridge.stop_game(gid)["ok"])
+
+    def test_stop_only_targets_one_game(self):
+        a, b = self._add("Alpha"), self._add("Beta")
+        self.bridge.launch_game(a)
+        self.bridge.launch_game(b)
+        self.bridge.stop_game(a)
+        self.assertEqual(self.bridge.poll_status()["running"], [b])
+        self.assertTrue(self.processes[0].terminated)
+        self.assertFalse(self.processes[1].terminated)
 
 
 if __name__ == "__main__":

@@ -175,6 +175,8 @@
                         font-weight:600; margin-top:3px; white-space:nowrap;
                         overflow:hidden; text-overflow:ellipsis; max-width:180px; }
   .detail .btn-primary { margin-left:auto; flex:none; }
+  .detail .btn-primary.is-stop { background:#5b2b2b; color:#ffb3b3; }
+  .detail .btn-primary.is-stop:hover { background:#6e3333; }
   .detail.empty-detail { justify-content:center; color:var(--muted2); font-size:12.5px; }
 
   /* 状态栏 */
@@ -590,11 +592,25 @@
       <button class="btn" id="detailCover" data-id="${row.id}">设置封面</button>
       <button class="btn" id="detailEdit" data-id="${row.id}">编辑</button>
       <button class="btn danger" id="detailDelete" data-id="${row.id}" data-name="${esc(row.name)}">删除</button>
-      <button class="btn-primary" id="detailLaunch" data-id="${row.id}">▶ 启动游戏</button>`;
+      ${detailLaunchHtml(row.id)}`;
     $("detailCover").addEventListener("click", () => openCoverDialog(row.id));
     $("detailEdit").addEventListener("click", () => openEdit(row.id));
     $("detailDelete").addEventListener("click", () => askDelete(row.id, row.name));
-    $("detailLaunch").addEventListener("click", () => launchSelected(row.id));
+    bindDetailLaunch(row.id);
+  }
+
+  function detailLaunchHtml(id) {
+    const running = state.running.includes(id);
+    const cls = `btn-primary${running ? " is-stop" : ""}`;
+    const label = running ? "■ 停止运行" : "▶ 启动游戏";
+    return `<button class="${cls}" id="detailLaunch" data-id="${id}">${label}</button>`;
+  }
+  function bindDetailLaunch(id) {
+    const btn = $("detailLaunch");
+    if (!btn) return;
+    const running = state.running.includes(id);
+    btn.addEventListener("click", () =>
+      running ? stopSelected(id) : launchSelected(id));
   }
 
   async function launchSelected(id) {
@@ -607,6 +623,19 @@
     $("lastEvent").style.color = "";
     const row = await api().get_game(id);
     $("lastEvent").textContent = `「${row ? row.name : "游戏"}」已启动…`;
+    await pollStatus();
+  }
+
+  async function stopSelected(id) {
+    const res = await api().stop_game(id);
+    if (!res.ok) {
+      $("lastEvent").textContent = `停止失败：${res.error}`;
+      $("lastEvent").style.color = "#e2685f";
+      return;
+    }
+    const row = await api().get_game(id);
+    $("lastEvent").style.color = "";
+    $("lastEvent").textContent = `「${row ? row.name : "游戏"}」已停止运行`;
     await pollStatus();
   }
 
