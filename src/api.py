@@ -16,7 +16,7 @@ import sqlite3
 import subprocess
 import threading
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Callable
 
 from src import covers, db, launcher, scanner
@@ -57,6 +57,21 @@ def filter_recent(rows: list[dict[str, Any]],
 def _clean(fields: dict[str, Any] | None) -> dict[str, str]:
     fields = fields or {}
     return {key: str(fields.get(key) or "") for key in FORM_FIELDS}
+
+
+def _game_fields(fields: dict[str, Any] | None) -> dict[str, str]:
+    """表单只填「可执行文件路径」时，拆成 path + exe 存入数据库。
+
+    仅当 exe 含路径分隔符（反斜杠或正斜杠）才拆，旧调用方传分开的 path/exe 不受影响。
+    """
+    out = _clean(fields)
+    exe = out.get("exe", "").strip()
+    if "/" in exe or "\\" in exe:
+        p = PureWindowsPath(exe)
+        if p.name:
+            out["exe"] = p.name
+            out["path"] = str(p.parent)
+    return out
 
 
 def _default_directory_picker() -> list[str]:
@@ -106,13 +121,31 @@ def _default_folder_opener(path: str) -> None:
         subprocess.Popen(["xdg-open", path])
 
 
+def _default_exe_picker() -> str | None:
+    """调用 pywebview 的可执行文件选择框；没有窗口或取消返回 None。"""
+    try:
+        import webview
+    except ImportError:
+        return None
+    if not webview.windows:
+        return None
+    result = webview.windows[0].create_file_dialog(
+        webview.FileDialog.OPEN,
+        file_types=("可执行文件 (*.exe)",),
+    )
+    if not result:
+        return None
+    return result[0] if isinstance(result, (tuple, list)) else str(result)
+
+
 class Bridge:
     def __init__(self, database: db.GameDB | None = None,
                  directory_picker: Callable[[], list[str]] | None = None,
                  process_launcher: Callable[[dict[str, Any]],
                                            subprocess.Popen] | None = None,
                  image_picker: Callable[[str], str | None] | None = None,
-                 folder_opener: Callable[[str], None] | None = None) -> None:
+                 folder_opener: Callable[[str], None] | None = None,
+                 exe_picker: Callable[[], str | None] | None = None) -> None:
         # 不在构造时建表：让测试可以传入临时库而不产生副作用；
         # 真实启动时由 webapp.main() 调用 init()。
         self.database = database or db.GameDB()
@@ -120,6 +153,7 @@ class Bridge:
         self.process_launcher = process_launcher or launcher.launch
         self.image_picker = image_picker or _default_image_picker
         self.folder_opener = folder_opener or _default_folder_opener
+        self.exe_picker = exe_picker or _default_exe_picker
         self._running: dict[int, subprocess.Popen] = {}
         self._lock = threading.Lock()
 
@@ -229,10 +263,14 @@ class Bridge:
             return {"ok": False, "error": f"无法打开目录: {exc}"}
         return {"ok": True}
 
+    def pick_executable(self) -> str | None:
+        """打开可执行文件选择框，返回所选 exe 路径；可注入假 picker 便于测试。"""
+        return self.exe_picker()
+
     # --- W3 增删改 ---
     def add_game(self, fields: dict[str, Any]) -> dict[str, Any]:
         try:
-            game_id = self.database.add(**_clean(fields))
+            game_id = self.database.add(**_game_fields(fields))
             return {"ok": True, "id": game_id}
         except (ValueError, sqlite3.IntegrityError) as exc:
             return {"ok": False, "error": str(exc)}
@@ -240,7 +278,7 @@ class Bridge:
     def update_game(self, game_id: int,
                     fields: dict[str, Any]) -> dict[str, Any]:
         try:
-            changed = self.database.update(game_id, **_clean(fields))
+            changed = self.database.update(game_id, **_game_fields(fields))
             return {"ok": changed, "error": "" if changed else "记录不存在"}
         except (ValueError, sqlite3.IntegrityError) as exc:
             return {"ok": False, "error": str(exc)}

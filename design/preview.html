@@ -331,13 +331,12 @@
       <button class="x" id="formClose">×</button></div>
     <div class="modal-body">
       <div class="field"><label>名称 *</label><input id="fName" placeholder="游戏名称"></div>
-      <div class="field"><label>游戏目录 *</label>
+      <div class="field"><label>可执行文件路径 *</label>
         <div class="field-row">
-          <input id="fPath" placeholder="D:\Games\Demo">
-          <button class="btn" id="fPathOpen" type="button" title="在文件管理器中打开该目录">打开目录</button>
+          <input id="fExe" placeholder="D:\Games\Demo\demo.exe">
+          <button class="btn" id="fExePick" type="button" title="选择游戏可执行文件">选择…</button>
         </div>
       </div>
-      <div class="field"><label>可执行文件 *</label><input id="fExe" placeholder="demo.exe"></div>
       <div class="field"><label>启动参数</label><input id="fArgs" placeholder="-windowed"></div>
       <div class="field"><label>标签（逗号分隔）</label><input id="fTags" placeholder="动作, 独立"></div>
       <div class="field"><label>备注</label><textarea id="fNote"></textarea></div>
@@ -470,6 +469,7 @@
     find_cover_candidates: id => ok({ok:true,
       paths:["D:/Games/Demo/cover.jpg", "D:/Games/Demo/assets/poster.png"]}),
     pick_image_file: id => ok("D:/Games/Demo/cover.jpg"),
+    pick_executable: () => ok("D:/Games/Demo/demo.exe"),
     open_folder: path => ok({ok:true}),
     list_games: (opts) => {
       opts = opts || {};
@@ -495,12 +495,16 @@
       return ok(Object.keys(c).sort().map(name => ({name:name, count:c[name]})));
     },
     get_stats: () => ok(stats()),
+    splitFields: f => { const o = Object.assign({}, f);
+        const e = (o.exe||"").trim();
+        if (/[\/]/.test(e)) { const i = Math.max(e.lastIndexOf("\\"), e.lastIndexOf("/"));
+          o.path = e.slice(0,i); o.exe = e.slice(i+1); } return o; },
     add_game: f => { const r = Object.assign({id:++nextId, play_count:0,
-        last_played:null, args:"", tags:"", note:""}, f); rows.push(r);
+        last_played:null, args:"", tags:"", note:""}, api.splitFields(f)); rows.push(r);
         return ok({ok:true, id:r.id}); },
     update_game: (id,f) => { const r = rows.find(x => x.id === id);
         if (!r) return ok({ok:false, error:"记录不存在"});
-        Object.assign(r,f); return ok({ok:true}); },
+        Object.assign(r,api.splitFields(f)); return ok({ok:true}); },
     delete_game: id => { const i = rows.findIndex(x => x.id === id);
         if (i < 0) return ok({ok:false}); rows.splice(i,1); return ok({ok:true}); },
     pick_directories: () => ok(["D:/steam/steamapps/common"]),
@@ -910,17 +914,20 @@
 
   function fillForm(row) {
     $("fName").value = row ? row.name : "";
-    $("fPath").value = row ? row.path : "";
-    $("fExe").value = row ? row.exe : "";
+    $("fExe").value = row ? fullExePath(row) : "";
     $("fArgs").value = row ? row.args : "";
     $("fTags").value = row ? row.tags : "";
     $("fNote").value = row ? row.note : "";
     $("formError").textContent = "";
   }
+  function fullExePath(row) {
+    const dir = (row.path || "").replace(/[\\\/]+$/, "");
+    return dir ? dir + "\\" + row.exe : row.exe;
+  }
   function readForm() {
-    return { name: $("fName").value, path: $("fPath").value,
-             exe: $("fExe").value, args: $("fArgs").value,
-             tags: $("fTags").value, note: $("fNote").value };
+    return { name: $("fName").value, exe: $("fExe").value,
+             args: $("fArgs").value, tags: $("fTags").value,
+             note: $("fNote").value };
   }
   function openAdd() {
     formState.editingId = null;
@@ -1060,10 +1067,9 @@
   $("formClose").addEventListener("click", closeAll);
   $("formCancel").addEventListener("click", closeAll);
   $("formSave").addEventListener("click", saveForm);
-  $("fPathOpen").addEventListener("click", async () => {
-    const res = await api().open_folder($("fPath").value);
-    if (!res.ok) $("formError").textContent = res.error || "打开目录失败";
-    else $("formError").textContent = "";
+  $("fExePick").addEventListener("click", async () => {
+    const path = await api().pick_executable();
+    if (path) $("fExe").value = path;
   });
   $("confirmClose").addEventListener("click", closeAll);
   $("confirmCancel").addEventListener("click", closeAll);

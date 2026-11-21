@@ -329,13 +329,12 @@
       <button class="x" id="formClose">×</button></div>
     <div class="modal-body">
       <div class="field"><label>名称 *</label><input id="fName" placeholder="游戏名称"></div>
-      <div class="field"><label>游戏目录 *</label>
+      <div class="field"><label>可执行文件路径 *</label>
         <div class="field-row">
-          <input id="fPath" placeholder="D:\Games\Demo">
-          <button class="btn" id="fPathOpen" type="button" title="在文件管理器中打开该目录">打开目录</button>
+          <input id="fExe" placeholder="D:\Games\Demo\demo.exe">
+          <button class="btn" id="fExePick" type="button" title="选择游戏可执行文件">选择…</button>
         </div>
       </div>
-      <div class="field"><label>可执行文件 *</label><input id="fExe" placeholder="demo.exe"></div>
       <div class="field"><label>启动参数</label><input id="fArgs" placeholder="-windowed"></div>
       <div class="field"><label>标签（逗号分隔）</label><input id="fTags" placeholder="动作, 独立"></div>
       <div class="field"><label>备注</label><textarea id="fNote"></textarea></div>
@@ -788,17 +787,20 @@
 
   function fillForm(row) {
     $("fName").value = row ? row.name : "";
-    $("fPath").value = row ? row.path : "";
-    $("fExe").value = row ? row.exe : "";
+    $("fExe").value = row ? fullExePath(row) : "";
     $("fArgs").value = row ? row.args : "";
     $("fTags").value = row ? row.tags : "";
     $("fNote").value = row ? row.note : "";
     $("formError").textContent = "";
   }
+  function fullExePath(row) {
+    const dir = (row.path || "").replace(/[\\\/]+$/, "");
+    return dir ? dir + "\\" + row.exe : row.exe;
+  }
   function readForm() {
-    return { name: $("fName").value, path: $("fPath").value,
-             exe: $("fExe").value, args: $("fArgs").value,
-             tags: $("fTags").value, note: $("fNote").value };
+    return { name: $("fName").value, exe: $("fExe").value,
+             args: $("fArgs").value, tags: $("fTags").value,
+             note: $("fNote").value };
   }
   function openAdd() {
     formState.editingId = null;
@@ -938,10 +940,9 @@
   $("formClose").addEventListener("click", closeAll);
   $("formCancel").addEventListener("click", closeAll);
   $("formSave").addEventListener("click", saveForm);
-  $("fPathOpen").addEventListener("click", async () => {
-    const res = await api().open_folder($("fPath").value);
-    if (!res.ok) $("formError").textContent = res.error || "打开目录失败";
-    else $("formError").textContent = "";
+  $("fExePick").addEventListener("click", async () => {
+    const path = await api().pick_executable();
+    if (path) $("fExe").value = path;
   });
   $("confirmClose").addEventListener("click", closeAll);
   $("confirmCancel").addEventListener("click", closeAll);
